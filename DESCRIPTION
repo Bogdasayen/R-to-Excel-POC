@@ -1,0 +1,6 @@
+Package: R-to-Excel-POC
+Type: Package
+Title: Proof of concept for R to Excel conversion
+Version: 0.0.1.0
+RoxygenNote: 7.2.3
+Encoding: UTF-8
