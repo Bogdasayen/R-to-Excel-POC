@@ -276,7 +276,7 @@ markov_model <- R6Class("markov_model", list(
     # Generate the Markov trace using transition probabilities from markov_inputs
     df_markov_trace <- data.frame(cycle = c(1:self$n_cycles))
     
-    cell_formula_temp <- rep("", n_cycles)
+    cell_formula_temp <- rep("", self$n_cycles)
     
     for(i_treatment in 1:self$n_treatments) {
       for(i_state in 1:self$n_states) {
