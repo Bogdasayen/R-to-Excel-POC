@@ -21,36 +21,47 @@ smoking_inputs <- input_parameters$new(v_names = c("Probability quit smoking web
                                                   "Probability relapse",
                                                   "Utility smoking",
                                                   "Utility not smoking",
-                                                  "Cost website"),
+                                                  "Cost website",
+                                                  "Cost GP smoking",
+                                                  "Cost statin smoking"),
                                       v_descriptions = c("Probability of quitting if on smoking website, follows a beta distribution",
                                                          "Probability of quitting smoking if on SoC, follows a beta distribution",
                                                          "Probability relapse, which is same across treatments and follows a beta distribution",
                                                          "Utility smoking, follows a Normal distribution",
                                                          "Utility not smoking, follows a Normal distribution",
-                                                         "Cost website, fixed value and model assumes no cost of SoC and no state costs"),
-                                      v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed"),
+                                                         "Cost website, fixed value and model assumes no cost of SoC and no state costs",
+                                                         "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
+                                                         "Cost of roughly 20% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"),
+                                      v_type = c("transition_probability", "transition_probability", "transition_probability", "utility", "utility", "one_off_cost", "cost", "cost"),
+                                      v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed", "normal", "normal"),
                                       m_hyperparameters = matrix(c(15, 85,
                                                                    12, 88,
                                                                    8, 92,
-                                                                   0.95/2, 0.01,
-                                                                   0.5, NA,
-                                                                   50, NA), 
-                                                                 nrow = 6, ncol = 2, byrow = TRUE,
+                                                                   0.95, 0.02,
+                                                                   1, NA,
+                                                                   50, NA,
+                                                                   49, 2,
+                                                                   0.2 * 3.45, 0.1 * 0.2 * 3.45), 
+                                                                 nrow = 8, ncol = 2, byrow = TRUE,
                                                                  dimnames = list(NULL, c("hp_1", "hp_2"))),
                                       m_transition = matrix(c(1, 2,
                                                               1, 2,
                                                               2, 1,
                                                               NA, NA,
                                                               NA, NA,
+                                                              NA, NA,
+                                                              NA, NA,
                                                               NA, NA),
-                                                            nrow = 6, ncol = 2, byrow = TRUE,
+                                                            nrow = 8, ncol = 2, byrow = TRUE,
                                                             dimnames = list(NULL, c("from", "to"))),
-                                      v_treatment = c(1, 2, NA, NA, NA, NA))
+                                      v_treatment = c(1, 2, NA, NA, NA, NA, NA, NA),
+                                      v_state = c(1, 1, 2, 1, 2, NA, 1, 1))
 
 
 # Define the Markov smoking model
 markov_smoking <- markov_model$new(n_states = 2,
                                    n_cycles = 10,
+                                   cycle_length = 0.5,
                                    n_samples = 1000,
                                    n_treatments = 2,
                                    v_state_names = c("Smoking", "Not smoking"),
@@ -71,6 +82,7 @@ markov_smoking$markov_inputs$m_values
 
 markov_smoking$generate_transition_matrices()
 
+
 # Check one sample of the transition matrices for each treatment
 # Note that probability of relapse is the same across website and SoC
 # And note that transition matrices sum to 1
@@ -79,6 +91,12 @@ markov_smoking$a_transition_matrices[2, 1, , ]
 
 # Generate the Markov trace
 markov_smoking$generate_markov_trace()
+
+
+markov_smoking$generate_costs_qalys()
+
+# Summarise the results
+markov_smoking$generate_results_table()
 
 # And export to Excel
 # Need to export model settings (states, cycles, treatments) and

@@ -25,10 +25,12 @@ input_parameters <- R6Class("markov_model", list(
   #' 
   #' @param v_names Vector of string names of the parameters (can be NULL)
   #' @param v_descriptions Vector of string descriptions of the parameters (can be NULL)
+  #' @param v_type Vector of strings specifying type of parameter (e.g., transition_probability, one_off_cost, cost)
   #' @param v_distributions Vector of strings specifying distributions (options are fixed, beta, normal)
   #' @param m_hyperparameters Matrix of parameters of the corresponding distribution for this parameter (at least one value, and unused are NULL)
   #' @param m_transition Matrix with from and to values identifying transitions which parameter informs (NA if not a transition probability parameter)
   #' @param v_treatment Numeric vector identifying the treatment to which this parameter corresponds (NA if all) 
+  #' @param v_state Numeric vector identifying the state to which this cost or utility parameter corresponds  (NA if all)
   #' @return input parameter object with df_spec giving specifications
   #' @examples
   #' markov_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
@@ -42,40 +44,51 @@ input_parameters <- R6Class("markov_model", list(
   #'                   "Probability relapse, which is same across treatments and follows a beta distribution",
   #'                   "Utility smoking, follows a Normal distribution",
   #'                   "Utility not smoking, follows a Normal distribution",
-  #'                   "Cost website, fixed value and model assumes no cost of SoC and no state costs"),
-  #'v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed"),
+  #'                   "Cost website, fixed value and model assumes no cost of SoC and no state costs"
+  #'                   "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
+  #'                   "Cost of roughly 20% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"),
+  #' v_type = c("transition_probability", "transition_probability", "transition_probability", "utility", "utility", "one_off_cost", "cost", "cost"),
+  #'v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed", "normal", "normal"),
   #'m_hyperparameters = matrix(c(15, 85,
   #'                             12, 88,
   #'                             8, 92,
-  #'                             0.95/2, 0.01,
-  #'                             0.5, NA,
-  #'                             50, NA), 
-  #'                           nrow = 6, ncol = 2, byrow = TRUE,
-  #'                           dimnames = list(NULL, c("hp_1", "hp_2")),
-  #'                           m_transition = matrix(c(1, 2,
+  #'                             0.95, 0.02,
+  #'                             1.0, NA,
+  #'                             50, NA,
+  #'                              49, 2,
+  #'                             0.69, 0.069), 
+  #'                           nrow = 8, ncol = 2, byrow = TRUE,
+  #'                           dimnames = list(NULL, c("hp_1", "hp_2"))),
+  #' m_transition = matrix(c(1, 2,
   #'                                                   1, 2,
   #'                                                   2, 1,
   #'                                                   NA, NA,
   #'                                                   NA, NA,
+  #'                                                   NA, NA,
   #'                                                   NA, NA),
-  #'                                                 nrow = 6, ncol = 2, byrow = TRUE,
+  #'                                                 nrow = 8, ncol = 2, byrow = TRUE,
   #'                                                 dimnames = list(NULL, c("from", "to"))),
-  #'                           v_treatment = c(1, 2, NA, NA, NA, NA))) 
+  #' v_treatment = c(1, 2, NA, NA, NA, NA, NA, NA),
+  #' v_state = c(1, 1, 2, 1, 2, NA, 1, 1)) 
   #'
   #' @export
   initialize = function(v_names,
                         v_descriptions,
+                        v_type,
                         v_distributions,
                         m_hyperparameters,
                         m_transition,
-                        v_treatment) {
+                        v_treatment,
+                        v_state) {
     self$n_parameters = length(v_names)
     self$df_spec <- data.frame(v_names,
                                v_descriptions,
+                               v_type,
                                v_distributions,
                                m_hyperparameters,
                                m_transition,
-                               v_treatment)
+                               v_treatment,
+                               v_state)
     self$m_values = NULL
   }, # End initialize function
   

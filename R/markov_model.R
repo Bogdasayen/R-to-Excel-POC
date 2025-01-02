@@ -6,6 +6,7 @@ require(openxlsx)
 #' 
 #' @field n_states Number of states for the Markov model
 #' @field n_cycles Number of cycles for the cohort simulation
+#' @field cycle_length Length of cycle (in unspecified units that must be consistent with costs and probabilities)
 #' @field n_parameters Number of parameters in the model
 #' @field n_samples Number of probabilistic samples
 #' @field n_treatments Number of treatments, including the reference
@@ -16,10 +17,20 @@ require(openxlsx)
 #' @field qalys_dr Discount rate for QALYs or other effects per cycle for cohort simulation (e.g., 5\% is qalys_dr = 0.05)
 #' @field markov_inputs An object of R6 class input_parameters with description and (optional) sampled values 
 #' @field a_transition_matrices Array of (time-homogeneous) random transition matrices with dimensions n_samples by n_states by n_states
-#' @field a_cohort_array Array of cohort vectors with dimensions n_treatments x n_samples x n_cycles x n_states
+#' @field a_state_costs Array of (time-homogeneous) random state costs with dimensions n_treatments by n_samples by n_states 
+#' @field a_state_qalys Array of (time-homogeneous) random state qalys with dimensions n_treatments by n_samples by n_states 
+#' @field m_one_off_costs Matrix of random one-off costs with dimensions n_treatments by n_samples
+#' @field m_one_off_disutilities Matrix of random one-off costs with dimensions n_treatments by n_samples
+#' @field a_cycle_costs Array of estimated cycle costs with dimensions n_cycles by n_treatments by n_samples
+#' @field a_cycle_qalys Array of estimated cycle QALYs with dimensions n_cycles by n_treatments by n_samples
+#' @field m_total_costs Matrix of estimated discounted total costs with dimensions n_treatments by n_samples
+#' @field m_total_qalys Matrix of estimated discounted total QALYs with dimensions n_treatments by n_samples
+#' @field m_total_costs_undiscounted Matrix of estimated undiscounted total costs with dimensions n_treatments by n_samples
+#' @field m_total_qalys_undiscounted Matrix of estimated undiscounted total QALYs with dimensions n_treatments by n_samples
+#' @field a_cohort_array Array of cohort vectors with dimensions n_treatments by n_samples by n_cycles by n_states
 #' @field v_init_cohort Initial cohort vector shared across treatments and samples
 #' @examples
-#' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
+#' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
 #' 
 #' @export
 markov_model <- R6Class("markov_model", list(
@@ -28,6 +39,7 @@ markov_model <- R6Class("markov_model", list(
 
   n_states = NULL,
   n_cycles = NULL,
+  cycle_length = NULL,
   n_parameters = NULL,
   n_samples = NULL,
   n_treatments = NULL,
@@ -38,6 +50,16 @@ markov_model <- R6Class("markov_model", list(
   qalys_dr = NULL,
   markov_inputs = NULL,
   a_transition_matrices = NULL,
+  a_state_costs = NULL,
+  a_state_qalys = NULL,
+  m_one_off_costs = NULL,
+  m_one_off_disutilities = NULL,
+  a_cycle_costs = NULL,
+  a_cycle_qalys = NULL,
+  m_total_costs = NULL,
+  m_total_qalys = NULL,
+  m_total_costs_undiscounted = NULL,
+  m_total_qalys_undiscounted = NULL,
   a_cohort_array = NULL,
   v_init_cohort = NULL,
   
@@ -50,6 +72,7 @@ markov_model <- R6Class("markov_model", list(
   #' Function to use Markov modelling to simulate total costs, QALYs and net benefit
   #' @param n_states Number of states for the Markov model
   #' @param n_cycles Number of cycles for the cohort simulation
+  #' @param cycle_length Length of cycle (in unspecified units that must be consistent with costs and probabilities)
   #' @param n_samples Number of probabilistic samples
   #' @param n_treatments Number of treatments, including the reference
   #' @param v_state_names Vector of length n_states
@@ -65,6 +88,7 @@ markov_model <- R6Class("markov_model", list(
   #' @export
   initialize = function(n_states,
                         n_cycles,
+                        cycle_length,
                         n_samples,
                         n_treatments,
                         v_state_names,
@@ -76,6 +100,8 @@ markov_model <- R6Class("markov_model", list(
                         v_init_cohort) {
     self$n_states = n_states
     self$n_cycles = n_cycles
+    self$cycle_length = cycle_length
+    self$n_parameters = nrow(markov_inputs$df_spec)
     self$n_samples = n_samples
     self$n_treatments = n_treatments
     self$v_state_names = v_state_names
@@ -167,6 +193,83 @@ markov_model <- R6Class("markov_model", list(
     invisible(self)
   },
   
+  #' @description
+  #' Function to calculate state costs based on input parameters
+  #' @examples 
+  #' smoking_markov_model$generate_state_costs()
+  #' @export 
+  #' 
+  generate_state_costs = function() {
+    
+    # Define an array to store state costs for each treatment, sample and state
+    self$a_state_costs <- array(0, dim = c(self$n_treatments, self$n_samples, self$n_states),
+                         dimnames = list(self$v_treatment_names, NULL, self$v_state_names))
+    
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "cost")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Check if applies to all states
+      if(is.na(self$markov_inputs$df_spec$v_state[i_parameter])) {
+        state_index_temp <-c(1:self$n_states)
+      } else {
+        state_index_temp <- self$markov_inputs$df_spec$v_state[i_parameter]
+      }
+      # Add to sampled values (repeating over each relevant treatment and state)
+      self$a_state_costs[treatment_index_temp, 
+                         , 
+                         state_index_temp] <- self$a_state_costs[treatment_index_temp, 
+                                                                 , 
+                                                                 state_index_temp] +
+        rep(self$markov_inputs$m_values[, i_parameter],
+            each = length(treatment_index_temp) * length(state_index_temp))
+    }
+    
+    
+    invisible(self)
+  }, # End generate_state_costs
+  
+  #' @description
+  #' Function to calculate state qalys based on input parameters
+  #' @examples 
+  #' smoking_markov_model$generate_state_qalys()
+  #' @export 
+  #' 
+  generate_state_qalys = function() {
+    
+    # Define an array to store state costs for each treatment, sample and state
+    self$a_state_qalys <- array(NA, dim = c(self$n_treatments, self$n_samples, self$n_states),
+                              dimnames = list(self$v_treatment_names, NULL, self$v_state_names))
+    
+    
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "utility")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Check if applies to all states
+      if(is.na(self$markov_inputs$df_spec$v_state[i_parameter])) {
+        state_index_temp <-c(1:self$n_states)
+      } else {
+        state_index_temp <- self$markov_inputs$df_spec$v_state[i_parameter]
+      }
+      # Set to sampled values (repeating over each relevant treatment and state)
+      # Cycle length multiplied by sampled utility value
+      self$a_state_qalys[treatment_index_temp, 
+                         , 
+                         state_index_temp] <- self$cycle_length *
+        rep(self$markov_inputs$m_values[, i_parameter],
+            each = length(treatment_index_temp) * length(state_index_temp))
+    }
+    
+    invisible(self)
+  }, # End generate_state_qalys
+  
   
   #' @description
   #' Function to generate the Markov trace (i.e., values for cohort matrix over time)
@@ -226,6 +329,168 @@ markov_model <- R6Class("markov_model", list(
     invisible(self)
   }, # End generate_markov_trace
   
+  #' @description
+  #' Function to generate cycle and total costs and QALYs
+  #' @examples 
+  #' smoking_markov_model$generate_markov_trace()
+  #' smoking_markov_model$generate_costs_qalys()
+  #' @export 
+  #' 
+  generate_costs_qalys = function() {
+    
+    # Need state costs and QALYs to be defined
+    if(is.null(self$a_state_costs)) {
+      warning("Generating state costs to enable calculation of cycle and total costs.")
+      self$generate_state_costs()
+    }
+    if(is.null(self$a_state_qalys)) {      
+      warning("Generating state QALYs to enable calculation of cycle and total costs.")
+      self$generate_state_qalys()
+    }
+    
+    # First calculate the one-off costs and disutilities
+    
+    # Define an array to store one-off costs and disutilities for each treatment and sample
+    self$m_one_off_costs <- array(0, dim = c(self$n_treatments, self$n_samples),
+                                dimnames = list(self$v_treatment_names, NULL))
+    self$m_one_off_disutilities <- array(0, dim = c(self$n_treatments, self$n_samples),
+                                  dimnames = list(self$v_treatment_names, NULL))
+    
+    # Sum the one-off costs
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "one_off_cost")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Add to sampled values (repeating over each relevant treatment and state)
+      self$m_one_off_costs[treatment_index_temp, ] <- 
+        self$m_one_off_costs[treatment_index_temp, ] +
+        rep(self$markov_inputs$m_values[, i_parameter],
+            each = length(treatment_index_temp) )
+    }
+    
+    # Sum the one-off disutilities
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "one_off_disutility")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Add to sampled values (repeating over each relevant treatment and state)
+      self$m_one_off_disutilities[treatment_index_temp, ] <- 
+        self$m_one_off_disutilities[treatment_index_temp, ] +
+        rep(self$markov_inputs$m_values[, i_parameter],
+            each = length(treatment_index_temp) )
+    }
+    
+    # Array to store the costs and QALYs accrued per cycle
+    # Filled in by loop below, discounted and summed
+    self$a_cycle_costs <- 
+      self$a_cycle_qalys <-
+      array(dim = c(self$n_treatments, self$n_samples, self$n_cycles), 
+            dimnames = list(self$v_treatment_names, NULL, NULL))
+    
+    # Arrays to store the total costs and total QALYs
+    self$m_total_costs <- 
+      self$m_total_costs_undiscounted <- 
+      self$m_total_qalys <-
+      self$m_total_qalys_undiscounted <-
+      array(dim = c(self$n_treatments, self$n_samples), 
+            dimnames = list(self$v_treatment_names, NULL))
+    
+    
+    
+    for(i_treatment in 1:self$n_treatments) {
+      for(i_sample in 1:self$n_samples) {
+        # Use the cohort vectors to calculate the 
+        # total costs for each cycle
+        self$a_cycle_costs[i_treatment, i_sample, ] <- 
+          self$a_cohort_array[i_treatment, i_sample, , ] %*% self$a_state_costs[i_treatment, i_sample, ]
+        # And total QALYs for each cycle
+        self$a_cycle_qalys[i_treatment, i_sample, ] <- 
+          self$a_cohort_array[i_treatment, i_sample, , ] %*% self$a_state_qalys[i_treatment, i_sample, ]
+        
+        # Combine the cycle and treatment costs and discount to get total discounted costs
+        self$m_total_costs[i_treatment, i_sample] <- 
+          self$m_one_off_costs[i_treatment, i_sample] + 
+          self$a_cycle_costs[i_treatment, i_sample, ] %*%
+          (1 / (1 + self$costs_dr))^seq(from = 0, to = ((self$n_cycles - 1) * self$cycle_length), by = self$cycle_length)
+        
+        # Combine the cycle and one-off costs to get total undiscounted costs
+        self$m_total_costs_undiscounted[i_treatment, i_sample] <- 
+          self$m_one_off_costs[i_treatment, i_sample] + 
+          sum(self$a_cycle_costs[i_treatment, i_sample, ])
+          
+        # Combine the cycle QALYs and one-off disutilities and discount to get total discounted QALYs
+        self$m_total_qalys[i_treatment, i_sample] <- 
+          self$m_one_off_disutilities[i_treatment, i_sample] + 
+          self$a_cycle_qalys[i_treatment, i_sample, ] %*%
+                (1 / (1 + self$qalys_dr))^seq(from = 0, to = ((self$n_cycles - 1) * self$cycle_length), by = self$cycle_length)
+        
+        # Combine the cycle QALYs and one-off disutilities to get total undiscounted QALYs
+        self$m_total_qalys_undiscounted[i_treatment, i_sample] <- 
+          self$m_one_off_disutilities[i_treatment, i_sample] + 
+          sum(self$a_cycle_qalys[i_treatment, i_sample, ])
+        
+      } # End loop over samples
+    } # End loop over treatments
+
+    invisible(self)
+  }, # End generate_costs_qalys
+  
+  
+  #' @description
+  #' Function to summarise cost-effectiveness results
+  #' 
+  #' @param i_reference_treatment Index for reference treatment (default 1)
+  #' @param v_wtp Vector of willingness-to-pay thresholds at which to calculate net benefits
+  #' @param currency_symbol String with currency symbol to use for row names
+  #' @return Matrix with column for each treatment and rows with costs, QALY, ICER and benefit summries
+  #' @examples 
+  #' smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
+  #' @export 
+  
+  generate_results_table = function(i_reference_treatment = 1,
+                                    v_wtp = c(20000, 30000),
+                                    currency_symbol = "£") {
+    m_results_table <- matrix(nrow = 7 + 2 * length(v_wtp), ncol = self$n_treatments,
+                            dimnames = list(c("Total costs", "Total QALYs",
+                                         "Total costs undiscounted", "Total QALYs undiscounted",
+                                         paste0("Net benefit at ", currency_symbol, v_wtp, "/QALY"),
+                                         "ICER",
+                                         "Incremental costs", "Incremental QALYs",
+                                         paste0("INB at ", currency_symbol, v_wtp, "/QALY")), 
+                                         self$v_treatment_names))
+    
+    
+    for(i_treatment in 1:self$n_treatments) {
+      m_results_table["Total costs", i_treatment] <- summarise_samples(self$m_total_costs[i_treatment, ])
+      m_results_table["Total QALYs", i_treatment] <- summarise_samples(self$m_total_qalys[i_treatment, ])
+      m_results_table["Total costs undiscounted", i_treatment] <- summarise_samples(self$m_total_costs_undiscounted[i_treatment, ])
+      m_results_table["Total QALYs undiscounted", i_treatment] <- summarise_samples(self$m_total_qalys_undiscounted[i_treatment, ])
+      m_results_table["ICER", i_treatment] <- mean(self$m_total_costs[i_treatment, ] - self$m_total_costs[i_reference_treatment, ]) /
+        mean(self$m_total_qalys[i_treatment, ] - self$m_total_qalys[i_reference_treatment, ])
+      m_results_table["Incremental costs", i_treatment] <- summarise_samples(self$m_total_costs[i_treatment, ] - self$m_total_costs[i_reference_treatment, ])
+      m_results_table["Incremental QALYs", i_treatment] <- summarise_samples(self$m_total_qalys[i_treatment, ] - self$m_total_qalys[i_reference_treatment, ])
+    
+      # Summarise the net benefits
+      for(wtp in v_wtp) {
+        m_results_table[paste0("Net benefit at ", currency_symbol, wtp, "/QALY"), i_treatment] <- 
+          summarise_samples(self$m_total_qalys[i_treatment, ] * wtp - self$m_total_costs[i_treatment, ])
+        
+        m_results_table[paste0("INB at ", currency_symbol, wtp, "/QALY"), i_treatment] <- 
+          summarise_samples((self$m_total_qalys[i_treatment, ] - self$m_total_qalys[i_reference_treatment, ]) * wtp - 
+                              (self$m_total_costs[i_treatment, ] - self$m_total_costs[i_reference_treatment, ]))
+        
+      }
+    } # End loop over treatments
+    
+    return(m_results_table)
+    invisible(self)
+  },
   
   #' @description
   #' Function to add the Markov trace calculation to an Excel workbook
