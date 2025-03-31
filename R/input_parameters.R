@@ -68,7 +68,7 @@ input_parameters <- R6Class("markov_model", list(
   #'                                                   NA, NA),
   #'                                                 nrow = 8, ncol = 2, byrow = TRUE,
   #'                                                 dimnames = list(NULL, c("from", "to"))),
-  #' v_treatment = c(1, 2, NA, NA, NA, NA, NA, NA),
+  #' v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
   #' v_state = c(1, 1, 2, 1, 2, NA, 1, 1)) 
   #'
   #' @export

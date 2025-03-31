@@ -54,7 +54,7 @@ smoking_inputs <- input_parameters$new(v_names = c("Probability quit smoking web
                                                               NA, NA),
                                                             nrow = 8, ncol = 2, byrow = TRUE,
                                                             dimnames = list(NULL, c("from", "to"))),
-                                      v_treatment = c(1, 2, NA, NA, NA, NA, NA, NA),
+                                      v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
                                       v_state = c(1, 1, 2, 1, 2, NA, 1, 1))
 
 
@@ -74,8 +74,6 @@ markov_smoking <- markov_model$new(n_states = 2,
 
 # Sample values for the fixed and random parameters
 markov_smoking$generate_input_parameters()
-
-markov_smoking$export_to_excel(wb_filename = "output/test_output_1_1.xlsm")
 
 # Check the sampled values for the input parameter matrix
 markov_smoking$markov_inputs$m_values

@@ -29,6 +29,7 @@ require(openxlsx)
 #' @field m_total_qalys_undiscounted Matrix of estimated undiscounted total QALYs with dimensions n_treatments by n_samples
 #' @field a_cohort_array Array of cohort vectors with dimensions n_treatments by n_samples by n_cycles by n_states
 #' @field v_init_cohort Initial cohort vector shared across treatments and samples
+#' @field df_excel_model_settings Data frame giving settings of model exported to Excel (only updated on calling export_to_excel())
 #' @examples
 #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
 #' 
@@ -62,6 +63,7 @@ markov_model <- R6Class("markov_model", list(
   m_total_qalys_undiscounted = NULL,
   a_cohort_array = NULL,
   v_init_cohort = NULL,
+  df_excel_model_settings = NULL,
   
   # This function is run when an object of this class is created
   # Arguments are modifiable
@@ -493,13 +495,14 @@ markov_model <- R6Class("markov_model", list(
   },
   
   #' @description
-  #' Function to add the Markov trace calculation to an Excel workbook
+  #' Function to export the Markov model to an Excel workbook
   #' 
   #' @param wb_filename Location of the Excel workbook to which sheets will be added
   #' @param startCol Starting column number
   #' @param startRow Starting row number
   #' @param psa_startCol Location of cells to which numbers of states, treatments, and cycles are added
   #' @param psa_startRow Location of cells to which numbers of states, treatments, and cycles are added
+  #' @param i_reference_treatment Index for reference treatment (default 1)
   #' @examples 
   #' smoking_markov_model$export_to_excel("output/test_workbook.xlsx", startCol = 5, startRow = 8)
   #' smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, startRow = 8, psa_startCol = 5, psa_startRow = 1)
@@ -509,21 +512,77 @@ markov_model <- R6Class("markov_model", list(
                              startCol = 5,
                              startRow = 8,
                              psa_startCol = 6,
-                             psa_startRow = 1) {
+                             psa_startRow = 1,
+                             i_reference_treatment = 1) {
     output_wb <- loadWorkbook(file = wb_filename, isUnzipped = FALSE)
     
     # Add the necessary sheets if not already included
+    if(!is.element("model_settings", names(output_wb))) {
+      addWorksheet(output_wb, "model_settings", tabColour = "green")  
+    }
+    
     if(!is.element("input_parameters", names(output_wb))) {
       addWorksheet(output_wb, "input_parameters", tabColour = "green")  
     }
+    
+    if(!is.element("state_costs", names(output_wb))) {
+      addWorksheet(output_wb, "state_costs", tabColour = "yellow")  
+    }
+    
+    if(!is.element("state_qalys", names(output_wb))) {
+      addWorksheet(output_wb, "state_qalys", tabColour = "yellow")  
+    }
+    
     
     if(!is.element("markov_trace", names(output_wb))) {
       addWorksheet(output_wb, "markov_trace", tabColour = "yellow")  
     }
     
+    
     if(!is.element("PSA", names(output_wb))) {
       addWorksheet(output_wb, "PSA", tabColour = "orange")  
     }
+    
+    if(!is.element("Results", names(output_wb))) {
+      addWorksheet(output_wb, "Results", tabColour = "orange")  
+    }
+    
+    # Specify settings of exported model
+    # Reset to NULL to rebuild
+    self$df_excel_model_settings <- data.frame("Setting" = c("cycle_length",
+                                                             "costs_dr",
+                                                             "qalys_dr",
+                                                             "n_samples",
+                                                             "willingness_to_pay",
+                                                             "reference_treatment",
+                                                             "n_cycles",
+                                                             "n_states",
+                                                             "n_parameters",
+                                                             "n_treatments"),
+                                               "Value" = c(self$cycle_length,
+                                                           self$costs_dr,
+                                                           self$qalys_dr,
+                                                           self$n_samples,
+                                                           self$lambda,
+                                                           self$v_treatment_names[i_reference_treatment],
+                                                           self$n_cycles,
+                                                           self$n_states,
+                                                           self$n_parameters,
+                                                           self$n_treatments),
+                                               "Modifiable" = c(rep("Y", 5), rep("N", 5)),
+                                               "excel_value_location" = paste0("model_settings!",
+                                                                               LETTERS[startCol + 1], 
+                                                                               startRow + c(1:10))
+    )
+    
+    # Add the model settings to the Excel workbook
+    writeData(output_wb, 
+              sheet = "model_settings", 
+              x = self$df_excel_model_settings,
+              startCol = startCol, 
+              startRow = startRow)
+    
+                                    
     
     # Specify the Excel locations of the parameter values
     # These are used in the Markov trace
@@ -538,7 +597,111 @@ markov_model <- R6Class("markov_model", list(
               startCol = startCol, 
               startRow = startRow)
     
+    
+    
+    # Generate formulae for the state costs using input parameters
+    df_state_costs <- data.frame(matrix("", ncol = self$n_treatments * self$n_states, nrow = 1))
+    
+    names(df_state_costs) <- paste0(rep(self$v_treatment_names, each = self$n_states),
+                                    "_",
+                                    self$v_state_names)
+    
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "cost")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Check if applies to all states
+      if(is.na(self$markov_inputs$df_spec$v_state[i_parameter])) {
+        state_index_temp <-c(1:self$n_states)
+      } else {
+        state_index_temp <- self$markov_inputs$df_spec$v_state[i_parameter]
+      }
+      # Add to sampled values (repeating over each relevant treatment and state)
+      for(i_treatment in treatment_index_temp) {
+        for(i_state in state_index_temp) {
+          df_state_costs[(i_treatment - 1) * self$n_states  + i_state] <- 
+            paste0(df_state_costs[(i_treatment - 1) * self$n_states  + i_state],
+                   # If blank don't need the + sign
+                   ifelse(df_state_costs[(i_treatment - 1) * self$n_states  + i_state] == "",
+                          "", " + "),
+                   self$markov_inputs$df_spec$excel_value_location[i_parameter]
+            )
+        } # End loop over state index temp
+      } # End loop over treatment index temp
+    } # End loop over parameters
+    
+    # Set each empty element to zero
+    # and each element to be a formula
+    for(i in 1:length(df_state_costs)) {
+      if(df_state_costs[, i] == "") df_state_costs[, i] <- 0
+      class(df_state_costs[, i]) <- c(class(df_state_costs[, i]), "formula")  
+    }
+    
+    
+    # Add the state costs to the Excel workbook
+    writeData(output_wb, 
+              sheet = "state_costs", 
+              x = df_state_costs,
+              startCol = startCol, 
+              startRow = startRow)
+    
+    
+    # Generate formulae for the state QALYs using input parameters
+    df_state_qalys <- data.frame(matrix("", ncol = self$n_treatments * self$n_states, nrow = 1))
+    
+    names(df_state_qalys) <- paste0(rep(self$v_treatment_names, each = self$n_states),
+                                    "_",
+                                    self$v_state_names)
+    
+    for(i_parameter in which(self$markov_inputs$df_spec$v_type == "utility")) {
+      # Check if applies to all treatments
+      if(is.na(self$markov_inputs$df_spec$v_treatment[i_parameter])) {
+        treatment_index_temp <-c(1:self$n_treatments)
+      } else {
+        treatment_index_temp <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+      }
+      # Check if applies to all states
+      if(is.na(self$markov_inputs$df_spec$v_state[i_parameter])) {
+        state_index_temp <-c(1:self$n_states)
+      } else {
+        state_index_temp <- self$markov_inputs$df_spec$v_state[i_parameter]
+      }
+      # Add to sampled values (repeating over each relevant treatment and state)
+      # Cycle length multiplied by sampled utility value
+      for(i_treatment in treatment_index_temp) {
+        for(i_state in state_index_temp) {
+          df_state_qalys[(i_treatment - 1) * self$n_states  + i_state] <- 
+            paste0(df_state_qalys[(i_treatment - 1) * self$n_states  + i_state],
+                   # If blank don't need the + sign
+                   ifelse(df_state_qalys[(i_treatment - 1) * self$n_states  + i_state] == "",
+                          "", " + "),
+                   with(self$df_excel_model_settings, excel_value_location[Setting == "cycle_length"]), 
+                   " * ",
+                   self$markov_inputs$df_spec$excel_value_location[i_parameter]
+            )
+        } # End loop over state index temp
+      } # End loop over treatment index temp
+    } # End loop over parameters
+    
+    # Set each element to be a formula
+    for(i in 1:length(df_state_qalys)) {
+      class(df_state_qalys[, i]) <- c(class(df_state_qalys[, i]), "formula")  
+    }
+    
+    
+    # Add the state QALYs to the Excel workbook
+    writeData(output_wb, 
+              sheet = "state_qalys", 
+              x = df_state_qalys,
+              startCol = startCol, 
+              startRow = startRow)
+    
+    
     # Generate the Markov trace using transition probabilities from markov_inputs
+    # This will also include calculation of state costs and QALYs
     df_markov_trace <- data.frame(cycle = c(1:self$n_cycles))
     
     cell_formula_temp <- rep("", self$n_cycles)
@@ -601,34 +764,166 @@ markov_model <- R6Class("markov_model", list(
         df_markov_trace <- cbind(df_markov_trace, cell_formula_temp)
         # Give column a sensible header
         names(df_markov_trace)[(i_treatment - 1) * self$n_states + i_state + 1] <- paste0(self$v_treatment_names[i_treatment],
-                                                                                     "_",
-                                                                                     self$v_state_names[i_state])
+                                                                                          "_",
+                                                                                          self$v_state_names[i_state])
       } # End loop over states
     } # End loop over treatments
     
-  
     
-    # Add the input parameters, including random sampling formulae, to the Excel workbook
+  
+    # Generate the costs engine using the markov trace
+
+    # Generate formulae for cycle costs and cycle qalys referencing markov_trace
+    # Create a vector to store cycle costs and cycle qalys for each treatment
+    cycle_costs_temp <- cycle_qalys_temp <- 
+      cycle_costs_disc_temp <- cycle_qalys_disc_temp <- rep("", self$n_cycles)
+    for(i_treatment in 1:self$n_treatments) {
+      for(i_cycle in 1:self$n_cycles) {
+        cycle_costs_temp[i_cycle] <- 
+          # Sum the product of probabilities and state occupancy costs
+          paste0(paste0(LETTERS[startCol + 
+                           (i_treatment - 1) * self$n_states +
+                           c(1:self$n_states)], startRow + i_cycle, 
+                 " * ",
+                 "state_costs!", LETTERS[startCol +
+                                           (i_treatment - 1) * self$n_states +
+                                           c(1:self$n_states) - 1], startRow + 1), collapse = " + ")
+        
+        cycle_qalys_temp[i_cycle] <- 
+          # Sum the product of probabilities and state qalys
+          paste0(paste0(LETTERS[startCol + 
+                           (i_treatment - 1) * self$n_states +
+                           c(1:self$n_states)], startRow + i_cycle, 
+                 " * ",
+                 "state_qalys!", LETTERS[startCol +
+                                           (i_treatment - 1) * self$n_states +
+                                           c(1:self$n_states) - 1], startRow + 1), collapse = " + ")
+        
+        # Continuous discounting
+        cycle_costs_disc_temp[i_cycle] <- paste0("(",
+                                                 cycle_costs_temp[i_cycle],
+                                                 ") * (1 / (1 + ",
+                                                 with(self$df_excel_model_settings, excel_value_location[Setting == "costs_dr"]),
+                                                 ")^(", i_cycle, " * ", 
+                                                 with(self$df_excel_model_settings, excel_value_location[Setting == "cycle_length"]), 
+                                                 "))")
+        # Continuous discounting
+        cycle_qalys_disc_temp[i_cycle] <- paste0("(",
+                                                 cycle_qalys_temp[i_cycle],
+                                                 ") * (1 / (1 + ",
+                                                 with(self$df_excel_model_settings, excel_value_location[Setting == "qalys_dr"]),
+                                                 ")^(", i_cycle, " * ", 
+                                                 with(self$df_excel_model_settings, excel_value_location[Setting == "cycle_length"]), 
+                                                 "))")
+      } # End loop over cycles
+      
+      # Append these formulae to the Markov trace
+      class(cycle_costs_temp) <- c(class(cycle_costs_temp), "formula")
+      class(cycle_qalys_temp) <- c(class(cycle_qalys_temp), "formula")
+      class(cycle_costs_disc_temp) <- c(class(cycle_costs_disc_temp), "formula")
+      class(cycle_qalys_disc_temp) <- c(class(cycle_qalys_disc_temp), "formula")
+      df_markov_trace <- cbind(df_markov_trace, 
+                               cycle_costs_temp, 
+                               cycle_qalys_temp,
+                               cycle_costs_disc_temp,
+                               cycle_qalys_disc_temp)
+      names(df_markov_trace)[(length(df_markov_trace) - 3):length(df_markov_trace)] <- c(
+        paste(self$v_treatment_names[i_treatment], "Undiscounted Costs"),
+        paste(self$v_treatment_names[i_treatment], "Undiscounted QALYs"),
+        paste(self$v_treatment_names[i_treatment], "Discounted Costs"),
+        paste(self$v_treatment_names[i_treatment], "Discounted QALYs")
+      )
+    } # End loop over treatments
+    
+    
+    # Add the markov trace with costs and QALYs to the Excel workbook
     writeData(output_wb, 
               sheet = "markov_trace", 
               x = df_markov_trace,
               startCol = startCol, 
               startRow = startRow)
     
+    
+    
+    
+    
+    
     # Add the model settings to guide the PSA of the Excel dummy template
-    df_model_settings <- data.frame(setting_names = c("n cycles", "n states", "n treatments"),
-                                      settings = c(self$n_cycles, 
-                                                   self$n_states, 
-                                                   self$n_treatments))
+    df_psa_settings <- data.frame(setting_names = c("n cycles", "n states", "n treatments"),
+                                  settings = c(
+                                    with(self$df_excel_model_settings, excel_value_location[Setting == "n_cycles"]),
+                                    with(self$df_excel_model_settings, excel_value_location[Setting == "n_states"]),
+                                    with(self$df_excel_model_settings, excel_value_location[Setting == "n_treatments"])
+                                  ))
+    class(df_psa_settings[, "settings"]) <- c(class(df_psa_settings[, "settings"]), "formula")
+
+    
     writeData(output_wb, 
               sheet = "PSA", 
-              x = df_model_settings,
+              x = df_psa_settings,
               startCol = psa_startCol, 
               startRow = psa_startRow)
     
-    saveWorkbook(output_wb, 
-                 file = wb_filename, 
-                 overwrite = TRUE)
+    
+    # Generate a results sheet
+    result_names <- c("Total Costs", "Total QALYs", "Total Costs (undiscounted)", "Total QALYs (undiscounted)",
+                      "Incremental Costs", "Incremental QALYs", 
+                      "ICER")
+    df_results <- data.frame(result_names)
+    
+    treatment_results_temp <- matrix("", nrow = length(result_names), ncol = 1,
+                                  dimnames = list(result_names, NULL))
+    
+    
+    # Generate formulae for total costs, QALYs and incremental results
+    for(i_treatment in 1:self$n_treatments) {
+      col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
+                                                                                           " Discounted Costs"))
+      treatment_results_temp["Total Costs", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      
+      col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
+                                                                           " Discounted QALYs"))
+      treatment_results_temp["Total QALYs", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      
+      col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
+                                                                           " Undiscounted Costs"))
+      treatment_results_temp["Total Costs (undiscounted)", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      
+      col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
+                                                                           " Undiscounted QALYs"))
+      treatment_results_temp["Total QALYs (undiscounted)", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      
+      # Calculating cell locations within the results sheet
+      treatment_results_temp["Incremental Costs", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 1, " - ", 
+        LETTERS[startCol + i_reference_treatment], startRow + 1)
+      treatment_results_temp["Incremental QALYs", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 2, " - ",
+        LETTERS[startCol + i_reference_treatment], startRow + 2)
+      if(i_treatment != i_reference_treatment) {
+        treatment_results_temp["ICER", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 1, " / ",
+          LETTERS[startCol + i_treatment], startRow + 2)
+      } else {
+        # Don't calculate an ICER if it's the reference
+        treatment_results_temp["ICER", ] <- ""
+      }
+      
+      df_results <- cbind(df_results, treatment_results_temp[, 1])
+      class(df_results[, i_treatment + 1]) <- c(class(df_results[, i_treatment]), "formula")
+    }
+    
+    names(df_results) <- c("Result", self$v_treatment_names)
+    
+    writeData(output_wb, 
+              sheet = "Results", 
+              x = df_results,
+              startCol = startCol, 
+              startRow = startRow)
+    
+    
+    
+    return_value <- saveWorkbook(output_wb, 
+                                 file = wb_filename, 
+                                 overwrite = TRUE,
+                                 returnValue = TRUE)
   }
   
 ) # End of public list
