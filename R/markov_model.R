@@ -333,6 +333,7 @@ markov_model <- R6Class("markov_model", list(
   
   #' @description
   #' Function to generate cycle and total costs and QALYs
+  #' 
   #' @examples 
   #' smoking_markov_model$generate_markov_trace()
   #' smoking_markov_model$generate_costs_qalys()
@@ -778,7 +779,34 @@ markov_model <- R6Class("markov_model", list(
     cycle_costs_temp <- cycle_qalys_temp <- 
       cycle_costs_disc_temp <- cycle_qalys_disc_temp <- rep("", self$n_cycles)
     for(i_treatment in 1:self$n_treatments) {
+      
+      # Check if there are any one off costs
+      one_off_cost_indices <- which(self$markov_inputs$df_spec$v_type == "one_off_cost" &
+                                      (self$markov_inputs$df_spec$v_treatment == i_treatment |
+                                         is.na(self$markov_inputs$df_spec$v_treatment)))
+      # Extract one off costs. These are added to the costs in first cycle at end of treatment loop
+      if(length(one_off_cost_indices) > 0) {
+        one_off_costs_temp <- paste(
+          self$markov_inputs$df_spec$excel_value_location[one_off_cost_indices], collapse = " + ")
+      } else {
+        one_off_costs_temp <- ""
+      }
+      
+      # Check if there are any one off (dis)utilities
+      one_off_utilities_indices <- which(self$markov_inputs$df_spec$v_type == "one_off_utility" &
+                                           (self$markov_inputs$df_spec$v_treatment == i_treatment |
+                                              is.na(self$markov_inputs$df_spec$v_treatment)))
+      # Extract one off (dis)utilities. These are added to the qalys in first cycle at end of treatment loop
+      if(length(one_off_utilities_indices) > 0) {
+        one_off_utilities_temp <- paste(
+          self$markov_inputs$df_spec$excel_value_location[one_off_utilities_indices], collapse = " + ")
+      } else {
+        one_off_utilities_temp <- ""
+      }
+      
       for(i_cycle in 1:self$n_cycles) {
+  
+        # Now add ongoing costs and qalys
         cycle_costs_temp[i_cycle] <- 
           # Sum the product of probabilities and state occupancy costs
           paste0(paste0(LETTERS[startCol + 
@@ -815,7 +843,15 @@ markov_model <- R6Class("markov_model", list(
                                                  ")^(", i_cycle, " * ", 
                                                  with(self$df_excel_model_settings, excel_value_location[Setting == "cycle_length"]), 
                                                  "))")
+        
+
       } # End loop over cycles
+  
+      # Add the one-off costs and (dis)utilities to the first cycle
+      if(one_off_costs_temp != "") cycle_costs_temp[1] <- paste(one_off_costs_temp, "+", cycle_costs_temp[1]) 
+      if(one_off_costs_temp != "") cycle_costs_disc_temp[1] <- paste(one_off_costs_temp, "+", cycle_costs_disc_temp[1]) 
+      if(one_off_utilities_temp != "") cycle_qalys_temp[1] <- paste(one_off_utilities_temp, "+", cycle_qalys_temp[1]) 
+      if(one_off_utilities_temp != "") cycle_qalys_disc_temp[1] <- paste(one_off_utilities_temp, "+", cycle_qalys_disc_temp[1])
       
       # Append these formulae to the Markov trace
       class(cycle_costs_temp) <- c(class(cycle_costs_temp), "formula")

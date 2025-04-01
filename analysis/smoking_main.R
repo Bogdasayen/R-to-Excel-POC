@@ -54,7 +54,7 @@ smoking_inputs <- input_parameters$new(v_names = c("Probability quit smoking web
                                                               NA, NA),
                                                             nrow = 8, ncol = 2, byrow = TRUE,
                                                             dimnames = list(NULL, c("from", "to"))),
-                                      v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
+                                      v_treatment = c(2, 1, NA, NA, NA, 2, NA, NA),
                                       v_state = c(1, 1, 2, 1, 2, NA, 1, 1))
 
 
@@ -95,6 +95,8 @@ markov_smoking$generate_costs_qalys()
 
 # Summarise the results
 markov_smoking$generate_results_table()
+write.csv(markov_smoking$generate_results_table(), file = "output/results_table.csv")
+
 
 # And export to Excel
 # Need to export model settings (states, cycles, treatments) and
