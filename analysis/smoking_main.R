@@ -95,14 +95,14 @@ markov_smoking$generate_costs_qalys()
 
 # Summarise the results
 markov_smoking$generate_results_table()
-write.csv(markov_smoking$generate_results_table(), file = "output/results_table.csv")
+write.csv(markov_smoking$generate_results_table(), file = "output/results_table_smoking_1.csv")
 
 
 # And export to Excel
 # Need to export model settings (states, cycles, treatments) and
 # sensible names to PSa. Ideally also add formatting to Markov trace and input
 # parameter headings
-markov_smoking$export_to_excel(wb_filename = "output/test_output_1_1.xlsm")
+markov_smoking$export_to_excel(wb_filename = "output/test_output_smoking_1.xlsm")
 
 
 # Check properties of the Markov trace
