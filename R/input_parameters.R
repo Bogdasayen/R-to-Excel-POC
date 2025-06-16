@@ -147,8 +147,8 @@ input_parameters <- R6Class("markov_model", list(
     # Export the Excel equivalent of each distribution function
     for(i_parameter in 1:self$n_parameters) {
       if(self$df_spec$v_distributions[i_parameter] == "beta") {
-        # Note that openxlsx only uses deprecated inverse distribution and not BETA.INV
-        excel_formulae[i_parameter] <- paste0("BETAINV(RAND(), ",
+        # Note that previously the deprecated inverse distribution BETAINV() was used and not BETA.INV()
+        excel_formulae[i_parameter] <- paste0("_xlfn.BETA.INV(RAND(), ",
                                               paste0(hp_1_col, startRow + i_parameter),
                                               ", ",
                                               paste0(hp_2_col, startRow + i_parameter),
@@ -158,8 +158,8 @@ input_parameters <- R6Class("markov_model", list(
         excel_formulae[i_parameter] <- paste0(hp_1_col, startRow + i_parameter)
       }
       if(self$df_spec$v_distributions[i_parameter] == "normal") {
-        # Note that openxlsx only uses deprecated inverse distribution and not NORM.INV
-        excel_formulae[i_parameter] <- paste0("NORMINV(RAND(), ",
+        # Note that previously the deprecated inverse distribution NORMINV() was used and not NORM.INV()
+        excel_formulae[i_parameter] <- paste0("_xlfn.NORM.INV(RAND(), ",
                                               paste0(hp_1_col, startRow + i_parameter),
                                               ", ",
                                               paste0(hp_2_col, startRow + i_parameter),

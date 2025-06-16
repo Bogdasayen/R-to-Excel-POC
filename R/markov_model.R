@@ -1,6 +1,3 @@
-require(R6)
-require(openxlsx)
-
 #' The Markov model class
 #' @description Markov model class
 #' 
@@ -33,6 +30,8 @@ require(openxlsx)
 #' @examples
 #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
 #' 
+#' @import R6
+#' @import openxlsx2
 #' @export
 markov_model <- R6Class("markov_model", list(
   # Assign variable for all public elements of the class
@@ -515,37 +514,38 @@ markov_model <- R6Class("markov_model", list(
                              psa_startCol = 6,
                              psa_startRow = 1,
                              i_reference_treatment = 1) {
-    output_wb <- loadWorkbook(file = wb_filename, isUnzipped = FALSE)
     
+    wb <- openxlsx2::wb_load(file = wb_filename)
+    sheet_names <- wb$get_sheet_names()
     # Add the necessary sheets if not already included
-    if(!is.element("model_settings", names(output_wb))) {
-      addWorksheet(output_wb, "model_settings", tabColour = "green")  
+    if(!is.element("model_settings", sheet_names)) {
+      wb$add_worksheet("model_settings", tab_colour = wb_color("green"))
     }
     
-    if(!is.element("input_parameters", names(output_wb))) {
-      addWorksheet(output_wb, "input_parameters", tabColour = "green")  
+    if(!is.element("input_parameters", sheet_names)) {
+      wb$add_worksheet("input_parameters", tab_colour = wb_color("green"))
     }
     
-    if(!is.element("state_costs", names(output_wb))) {
-      addWorksheet(output_wb, "state_costs", tabColour = "yellow")  
+    if(!is.element("state_costs", sheet_names)) {
+      wb$add_worksheet("state_costs", tab_colour = wb_color("yellow"))
     }
     
-    if(!is.element("state_qalys", names(output_wb))) {
-      addWorksheet(output_wb, "state_qalys", tabColour = "yellow")  
-    }
-    
-    
-    if(!is.element("markov_trace", names(output_wb))) {
-      addWorksheet(output_wb, "markov_trace", tabColour = "yellow")  
+    if(!is.element("state_qalys", sheet_names)) {
+      wb$add_worksheet("state_qalys", tab_colour = wb_color("yellow"))
     }
     
     
-    if(!is.element("PSA", names(output_wb))) {
-      addWorksheet(output_wb, "PSA", tabColour = "orange")  
+    if(!is.element("markov_trace", sheet_names)) {
+      wb$add_worksheet("markov_trace", tab_colour = wb_color("yellow"))
     }
     
-    if(!is.element("Results", names(output_wb))) {
-      addWorksheet(output_wb, "Results", tabColour = "orange")  
+    
+    if(!is.element("PSA", sheet_names)) {
+      wb$add_worksheet("PSA", tab_colour = wb_color("orange"))
+    }
+    
+    if(!is.element("Results", sheet_names)) {
+      wb$add_worksheet("Results", tab_colour = wb_color("orange"))
     }
     
     # Specify settings of exported model
@@ -577,14 +577,16 @@ markov_model <- R6Class("markov_model", list(
     )
     
     # Add the model settings to the Excel workbook
-    writeData(output_wb, 
-              sheet = "model_settings", 
-              x = self$df_excel_model_settings,
-              startCol = startCol, 
-              startRow = startRow)
     
                                     
     
+    wb$add_data(
+      sheet = "model_settings",
+      start_row = startRow,
+      start_col = startCol,
+      x = self$df_excel_model_settings,
+      na.strings = NULL
+    )
     # Specify the Excel locations of the parameter values
     # These are used in the Markov trace
     self$markov_inputs$specify_excel(sheet = "input_parameters", 
@@ -592,14 +594,16 @@ markov_model <- R6Class("markov_model", list(
                                      startRow = startRow)
     
     # Add the input parameters, including random sampling formulae, to the Excel workbook
-    writeData(output_wb, 
-              sheet = "input_parameters", 
-              x = self$markov_inputs$df_spec,
-              startCol = startCol, 
-              startRow = startRow)
     
     
     
+    wb$add_data(
+      sheet = "input_parameters",
+      start_row = startRow,
+      start_col = startCol,
+      x = self$markov_inputs$df_spec,
+      na.strings = NULL
+    )
     # Generate formulae for the state costs using input parameters
     df_state_costs <- data.frame(matrix("", ncol = self$n_treatments * self$n_states, nrow = 1))
     
@@ -643,13 +647,14 @@ markov_model <- R6Class("markov_model", list(
     
     
     # Add the state costs to the Excel workbook
-    writeData(output_wb, 
-              sheet = "state_costs", 
-              x = df_state_costs,
-              startCol = startCol, 
-              startRow = startRow)
-    
-    
+    wb$add_data(
+      sheet = "state_costs",
+      start_row = startRow,
+      start_col = startCol,
+      x = df_state_costs,
+      na.strings = NULL
+    )
+
     # Generate formulae for the state QALYs using input parameters
     df_state_qalys <- data.frame(matrix("", ncol = self$n_treatments * self$n_states, nrow = 1))
     
@@ -694,13 +699,14 @@ markov_model <- R6Class("markov_model", list(
     
     
     # Add the state QALYs to the Excel workbook
-    writeData(output_wb, 
-              sheet = "state_qalys", 
-              x = df_state_qalys,
-              startCol = startCol, 
-              startRow = startRow)
-    
-    
+    wb$add_data(
+      sheet = "state_qalys",
+      start_row = startRow,
+      start_col = startCol,
+      x = df_state_qalys,
+      na.strings = NULL
+    )
+
     # Generate the Markov trace using transition probabilities from markov_inputs
     # This will also include calculation of state costs and QALYs
     df_markov_trace <- data.frame(cycle = c(1:self$n_cycles))
@@ -873,17 +879,19 @@ markov_model <- R6Class("markov_model", list(
     
     
     # Add the markov trace with costs and QALYs to the Excel workbook
-    writeData(output_wb, 
-              sheet = "markov_trace", 
-              x = df_markov_trace,
-              startCol = startCol, 
-              startRow = startRow)
-    
-    
-    
-    
-    
-    
+    wb$add_data(
+      sheet = "markov_trace",
+      start_row = startRow,
+      start_col = startCol,
+      x = df_markov_trace,
+      na.strings = NULL
+    )
+
+
+
+
+
+
     # Add the model settings to guide the PSA of the Excel dummy template
     df_psa_settings <- data.frame(setting_names = c("n cycles", "n states", "n treatments"),
                                   settings = c(
@@ -894,13 +902,15 @@ markov_model <- R6Class("markov_model", list(
     class(df_psa_settings[, "settings"]) <- c(class(df_psa_settings[, "settings"]), "formula")
 
     
-    writeData(output_wb, 
-              sheet = "PSA", 
-              x = df_psa_settings,
-              startCol = psa_startCol, 
-              startRow = psa_startRow)
-    
-    
+    wb$add_data(
+      sheet = "PSA",
+      start_row = psa_startRow,
+      start_col = psa_startCol,
+      x = df_psa_settings,
+      na.strings = NULL
+    )
+
+
     # Generate a results sheet
     result_names <- c("Total Costs", "Total QALYs", "Total Costs (undiscounted)", "Total QALYs (undiscounted)",
                       "Incremental Costs", "Incremental QALYs", 
@@ -947,19 +957,19 @@ markov_model <- R6Class("markov_model", list(
     }
     
     names(df_results) <- c("Result", self$v_treatment_names)
-    
-    writeData(output_wb, 
-              sheet = "Results", 
-              x = df_results,
-              startCol = startCol, 
-              startRow = startRow)
-    
-    
-    
-    return_value <- saveWorkbook(output_wb, 
-                                 file = wb_filename, 
-                                 overwrite = TRUE,
-                                 returnValue = TRUE)
+
+
+    wb$add_data(
+      sheet = "Results",
+      start_row = startRow,
+      start_col = startCol,
+      x = df_results,
+      na.strings = NULL
+    )
+
+    wb$save(file = wb_filename)
+    # returnValue
+    file.exists(wb_filename)
   }
   
 ) # End of public list
