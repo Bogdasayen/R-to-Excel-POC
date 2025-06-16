@@ -627,12 +627,14 @@ markov_model <- R6Class("markov_model", list(
       # Add to sampled values (repeating over each relevant treatment and state)
       for(i_treatment in treatment_index_temp) {
         for(i_state in state_index_temp) {
-          df_state_costs[(i_treatment - 1) * self$n_states  + i_state] <- 
-            paste0(df_state_costs[(i_treatment - 1) * self$n_states  + i_state],
-                   # If blank don't need the + sign
-                   ifelse(df_state_costs[(i_treatment - 1) * self$n_states  + i_state] == "",
-                          "", " + "),
-                   self$markov_inputs$df_spec$excel_value_location[i_parameter]
+          df_state_costs[(i_treatment - 1) * self$n_states  + i_state] <-
+            paste0(c(
+              df_state_costs[(i_treatment - 1) * self$n_states  + i_state],
+              self$markov_inputs$df_spec$excel_value_location[i_parameter]
+            ),
+            # If blank don't need the + sign,
+            collapse = ifelse(df_state_costs[(i_treatment - 1) * self$n_states  + i_state] == "",
+                              "", " + ")
             )
         } # End loop over state index temp
       } # End loop over treatment index temp
@@ -726,7 +728,7 @@ markov_model <- R6Class("markov_model", list(
         # Create the sum of probabilities of exiting current state
         sum_probabilities_from <- ifelse(length(from_indices) == 1,
                                          self$markov_inputs$df_spec$excel_value_location[from_indices],
-                                         paste0(self$markov_inputs$df_spec$excel_value_location[from_indices], sep = "+"))
+                                         paste0(self$markov_inputs$df_spec$excel_value_location[from_indices], collapse = "+"))
         
         for(i_cycle in 2:self$n_cycles) {
           # Numeric for row with previous cohort probabilities
@@ -736,8 +738,8 @@ markov_model <- R6Class("markov_model", list(
           cell_formula_temp[i_cycle] <- paste0(LETTERS[startCol + 
                                                          (i_treatment - 1) * self$n_states +
                                                          i_state], previous_row,
-                                               " * (1 - ",
-                                               sum_probabilities_from,")")
+                                               " * (1- ",
+                                               if (sum_probabilities_from == "") 0 else sum_probabilities_from, ")")
           # Now append the probabilities of entering the state
           from_prob_formulae <- c()
           for(j_state in c(1:self$n_states)[-i_state]) {
@@ -763,8 +765,8 @@ markov_model <- R6Class("markov_model", list(
           sum_probabilities_to <- ifelse(length(from_prob_formulae) == 0, "",
                                          ifelse(length(from_prob_formulae) == 1,
                                                 from_prob_formulae,
-                                                paste0(from_prob_formulae, sep = "+")))
-          cell_formula_temp[i_cycle] <- paste0(cell_formula_temp[i_cycle], " + ", sum_probabilities_to)
+                                                paste0(from_prob_formulae, collapse = "+")))
+          cell_formula_temp[i_cycle] <- paste0(c(cell_formula_temp[i_cycle], if (sum_probabilities_to == "") NULL else sum_probabilities_to), collapse = " + ")
         } # End loop over i_cycle
         # Append these formulae to the Markov trace
         class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
@@ -854,11 +856,10 @@ markov_model <- R6Class("markov_model", list(
       } # End loop over cycles
   
       # Add the one-off costs and (dis)utilities to the first cycle
-      if(one_off_costs_temp != "") cycle_costs_temp[1] <- paste(one_off_costs_temp, "+", cycle_costs_temp[1]) 
-      if(one_off_costs_temp != "") cycle_costs_disc_temp[1] <- paste(one_off_costs_temp, "+", cycle_costs_disc_temp[1]) 
-      if(one_off_utilities_temp != "") cycle_qalys_temp[1] <- paste(one_off_utilities_temp, "+", cycle_qalys_temp[1]) 
-      if(one_off_utilities_temp != "") cycle_qalys_disc_temp[1] <- paste(one_off_utilities_temp, "+", cycle_qalys_disc_temp[1])
-      
+      if(one_off_costs_temp != "") cycle_costs_temp[1] <- paste(one_off_costs_temp, cycle_costs_temp[1], sep = "+")
+      if(one_off_costs_temp != "") cycle_costs_disc_temp[1] <- paste(one_off_costs_temp, cycle_costs_disc_temp[1], sep = "+")
+      if(one_off_utilities_temp != "") cycle_qalys_temp[1] <- paste(one_off_utilities_temp, cycle_qalys_temp[1], sep = "+")
+      if(one_off_utilities_temp != "") cycle_qalys_disc_temp[1] <- paste(one_off_utilities_temp, cycle_qalys_disc_temp[1], sep = "+")
       # Append these formulae to the Markov trace
       class(cycle_costs_temp) <- c(class(cycle_costs_temp), "formula")
       class(cycle_qalys_temp) <- c(class(cycle_qalys_temp), "formula")
