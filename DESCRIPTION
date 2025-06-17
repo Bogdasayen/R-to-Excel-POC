@@ -2,8 +2,8 @@ Package: R2ExcelPOC
 Type: Package
 Title: Proof of concept for R to Excel conversion
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Howard", "Thom", , "howard.thom@cliftoninsight.co.uk", role = c("aut", "cre"))
+Description: Proves feasibility of automatic conversion of health economic models from R to Excel
 License: MIT + LICENSE
 Version: 0.0.1.0
 RoxygenNote: 7.3.2
