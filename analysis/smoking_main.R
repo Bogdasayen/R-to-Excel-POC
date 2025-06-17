@@ -5,7 +5,7 @@
 # Medical School short course examples from Intro to EE and EE Modelling using R
 # Howard Thom, Clifton Insight 20-October-2024
 
-library(R6)
+library(R2ExcelPOC)
 
 set.seed(2345295)
 
@@ -13,7 +13,7 @@ set.seed(2345295)
 #roxygen2::roxygenise()
 
 # Load necessary functions from the package
-devtools::load_all()
+# devtools::load_all()
 
 # Specify the input parameters for the Markov smoking model
 smoking_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
@@ -115,3 +115,5 @@ markov_smoking$a_cohort_array["SoC with website", 1, , ]
 # For comparison with Excel, average time in each state across PSA samples
 # Average time not smoking on SoC is about 0.617 while with website is 0.672
 apply(markov_smoking$a_cohort_array, c(1, 4), mean)
+
+openxlsx2::xl_open("output/test_output_smoking_1.xlsm")

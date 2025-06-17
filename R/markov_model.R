@@ -1,6 +1,3 @@
-require(R6)
-require(openxlsx2)
-
 #' The Markov model class
 #' @description Markov model class
 #' 
@@ -33,6 +30,9 @@ require(openxlsx2)
 #' @examples
 #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
 #' 
+#' @import R6
+#' @import openxlsx2
+#' @importFrom stats quantile
 #' @export
 markov_model <- R6Class("markov_model", list(
   # Assign variable for all public elements of the class
@@ -458,7 +458,7 @@ markov_model <- R6Class("markov_model", list(
   
   generate_results_table = function(i_reference_treatment = 1,
                                     v_wtp = c(20000, 30000),
-                                    currency_symbol = "£") {
+                                    currency_symbol = "GBP") {
     m_results_table <- matrix(nrow = 7 + 2 * length(v_wtp), ncol = self$n_treatments,
                             dimnames = list(c("Total costs", "Total QALYs",
                                          "Total costs undiscounted", "Total QALYs undiscounted",
@@ -516,7 +516,7 @@ markov_model <- R6Class("markov_model", list(
                              psa_startRow = 1,
                              i_reference_treatment = 1) {
     
-    wb <- openxlsx2::wb_load(file = wb_filename)
+    wb <- openxlsx2::wb_load(file = system.file("ext", "template.xlsm", package = "R2ExcelPOC"))
     sheet_names <- wb$get_sheet_names()
     # Add the necessary sheets if not already included
     if(!is.element("model_settings", sheet_names)) {

@@ -7,14 +7,14 @@
 Markov model class
 }
 \examples{
-markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
+1+1
 
 
 ## ------------------------------------------------
 ## Method `markov_model$new`
 ## ------------------------------------------------
 
-markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+1+1
 
 ## ------------------------------------------------
 ## Method `markov_model$generate_input_parameters`
@@ -29,10 +29,35 @@ smoking_markov_model$generate_input_parameters(n_samples = 10000)
 smoking_markov_model$generate_transition_matrices()
 
 ## ------------------------------------------------
+## Method `markov_model$generate_state_costs`
+## ------------------------------------------------
+
+smoking_markov_model$generate_state_costs()
+
+## ------------------------------------------------
+## Method `markov_model$generate_state_qalys`
+## ------------------------------------------------
+
+smoking_markov_model$generate_state_qalys()
+
+## ------------------------------------------------
 ## Method `markov_model$generate_markov_trace`
 ## ------------------------------------------------
 
 smoking_markov_model$generate_markov_trace()
+
+## ------------------------------------------------
+## Method `markov_model$generate_costs_qalys`
+## ------------------------------------------------
+
+smoking_markov_model$generate_markov_trace()
+smoking_markov_model$generate_costs_qalys()
+
+## ------------------------------------------------
+## Method `markov_model$generate_results_table`
+## ------------------------------------------------
+
+smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
 
 ## ------------------------------------------------
 ## Method `markov_model$export_to_excel`
@@ -47,6 +72,8 @@ smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, 
 \item{\code{n_states}}{Number of states for the Markov model}
 
 \item{\code{n_cycles}}{Number of cycles for the cohort simulation}
+
+\item{\code{cycle_length}}{Length of cycle (in unspecified units that must be consistent with costs and probabilities)}
 
 \item{\code{n_parameters}}{Number of parameters in the model}
 
@@ -68,9 +95,31 @@ smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, 
 
 \item{\code{a_transition_matrices}}{Array of (time-homogeneous) random transition matrices with dimensions n_samples by n_states by n_states}
 
-\item{\code{a_cohort_array}}{Array of cohort vectors with dimensions n_treatments x n_samples x n_cycles x n_states}
+\item{\code{a_state_costs}}{Array of (time-homogeneous) random state costs with dimensions n_treatments by n_samples by n_states}
+
+\item{\code{a_state_qalys}}{Array of (time-homogeneous) random state qalys with dimensions n_treatments by n_samples by n_states}
+
+\item{\code{m_one_off_costs}}{Matrix of random one-off costs with dimensions n_treatments by n_samples}
+
+\item{\code{m_one_off_disutilities}}{Matrix of random one-off costs with dimensions n_treatments by n_samples}
+
+\item{\code{a_cycle_costs}}{Array of estimated cycle costs with dimensions n_cycles by n_treatments by n_samples}
+
+\item{\code{a_cycle_qalys}}{Array of estimated cycle QALYs with dimensions n_cycles by n_treatments by n_samples}
+
+\item{\code{m_total_costs}}{Matrix of estimated discounted total costs with dimensions n_treatments by n_samples}
+
+\item{\code{m_total_qalys}}{Matrix of estimated discounted total QALYs with dimensions n_treatments by n_samples}
+
+\item{\code{m_total_costs_undiscounted}}{Matrix of estimated undiscounted total costs with dimensions n_treatments by n_samples}
+
+\item{\code{m_total_qalys_undiscounted}}{Matrix of estimated undiscounted total QALYs with dimensions n_treatments by n_samples}
+
+\item{\code{a_cohort_array}}{Array of cohort vectors with dimensions n_treatments by n_samples by n_cycles by n_states}
 
 \item{\code{v_init_cohort}}{Initial cohort vector shared across treatments and samples}
+
+\item{\code{df_excel_model_settings}}{Data frame giving settings of model exported to Excel (only updated on calling export_to_excel())}
 }
 \if{html}{\out{</div>}}
 }
@@ -80,7 +129,11 @@ smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, 
 \item \href{#method-markov_model-new}{\code{markov_model$new()}}
 \item \href{#method-markov_model-generate_input_parameters}{\code{markov_model$generate_input_parameters()}}
 \item \href{#method-markov_model-generate_transition_matrices}{\code{markov_model$generate_transition_matrices()}}
+\item \href{#method-markov_model-generate_state_costs}{\code{markov_model$generate_state_costs()}}
+\item \href{#method-markov_model-generate_state_qalys}{\code{markov_model$generate_state_qalys()}}
 \item \href{#method-markov_model-generate_markov_trace}{\code{markov_model$generate_markov_trace()}}
+\item \href{#method-markov_model-generate_costs_qalys}{\code{markov_model$generate_costs_qalys()}}
+\item \href{#method-markov_model-generate_results_table}{\code{markov_model$generate_results_table()}}
 \item \href{#method-markov_model-export_to_excel}{\code{markov_model$export_to_excel()}}
 \item \href{#method-markov_model-clone}{\code{markov_model$clone()}}
 }
@@ -96,6 +149,7 @@ Function to use Markov modelling to simulate total costs, QALYs and net benefit
 \if{html}{\out{<div class="r">}}\preformatted{markov_model$new(
   n_states,
   n_cycles,
+  cycle_length,
   n_samples,
   n_treatments,
   v_state_names,
@@ -114,6 +168,8 @@ Function to use Markov modelling to simulate total costs, QALYs and net benefit
 \item{\code{n_states}}{Number of states for the Markov model}
 
 \item{\code{n_cycles}}{Number of cycles for the cohort simulation}
+
+\item{\code{cycle_length}}{Length of cycle (in unspecified units that must be consistent with costs and probabilities)}
 
 \item{\code{n_samples}}{Number of probabilistic samples}
 
@@ -140,7 +196,7 @@ An initialised Markov model
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+\preformatted{1+1
 }
 \if{html}{\out{</div>}}
 
@@ -191,6 +247,42 @@ Function to fill in the transition matrices array
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-markov_model-generate_state_costs"></a>}}
+\if{latex}{\out{\hypertarget{method-markov_model-generate_state_costs}{}}}
+\subsection{Method \code{generate_state_costs()}}{
+Function to calculate state costs based on input parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{markov_model$generate_state_costs()}\if{html}{\out{</div>}}
+}
+
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{smoking_markov_model$generate_state_costs()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-markov_model-generate_state_qalys"></a>}}
+\if{latex}{\out{\hypertarget{method-markov_model-generate_state_qalys}{}}}
+\subsection{Method \code{generate_state_qalys()}}{
+Function to calculate state qalys based on input parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{markov_model$generate_state_qalys()}\if{html}{\out{</div>}}
+}
+
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{smoking_markov_model$generate_state_qalys()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-markov_model-generate_markov_trace"></a>}}
 \if{latex}{\out{\hypertarget{method-markov_model-generate_markov_trace}{}}}
 \subsection{Method \code{generate_markov_trace()}}{
@@ -209,17 +301,73 @@ Function to generate the Markov trace (i.e., values for cohort matrix over time)
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-markov_model-generate_costs_qalys"></a>}}
+\if{latex}{\out{\hypertarget{method-markov_model-generate_costs_qalys}{}}}
+\subsection{Method \code{generate_costs_qalys()}}{
+Function to generate cycle and total costs and QALYs
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{markov_model$generate_costs_qalys()}\if{html}{\out{</div>}}
+}
+
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{smoking_markov_model$generate_markov_trace()
+smoking_markov_model$generate_costs_qalys()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-markov_model-generate_results_table"></a>}}
+\if{latex}{\out{\hypertarget{method-markov_model-generate_results_table}{}}}
+\subsection{Method \code{generate_results_table()}}{
+Function to summarise cost-effectiveness results
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{markov_model$generate_results_table(
+  i_reference_treatment = 1,
+  v_wtp = c(20000, 30000),
+  currency_symbol = "GBP"
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{i_reference_treatment}}{Index for reference treatment (default 1)}
+
+\item{\code{v_wtp}}{Vector of willingness-to-pay thresholds at which to calculate net benefits}
+
+\item{\code{currency_symbol}}{String with currency symbol to use for row names}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Matrix with column for each treatment and rows with costs, QALY, ICER and benefit summries
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-markov_model-export_to_excel"></a>}}
 \if{latex}{\out{\hypertarget{method-markov_model-export_to_excel}{}}}
 \subsection{Method \code{export_to_excel()}}{
-Function to add the Markov trace calculation to an Excel workbook
+Function to export the Markov model to an Excel workbook
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{markov_model$export_to_excel(
   wb_filename,
   startCol = 5,
   startRow = 8,
   psa_startCol = 6,
-  psa_startRow = 1
+  psa_startRow = 1,
+  i_reference_treatment = 1
 )}\if{html}{\out{</div>}}
 }
 
@@ -235,6 +383,8 @@ Function to add the Markov trace calculation to an Excel workbook
 \item{\code{psa_startCol}}{Location of cells to which numbers of states, treatments, and cycles are added}
 
 \item{\code{psa_startRow}}{Location of cells to which numbers of states, treatments, and cycles are added}
+
+\item{\code{i_reference_treatment}}{Index for reference treatment (default 1)}
 }
 \if{html}{\out{</div>}}
 }

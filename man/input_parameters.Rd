@@ -12,49 +12,19 @@ Class to store input parameter specification and samples for models
 ## Method `input_parameters$new`
 ## ------------------------------------------------
 
-markov_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
-"Probability quit smoking SoC",
-"Probability relapse",
-"Utility smoking",
-"Utility not smoking",
-"Cost website"),
-v_descriptions = c("Probability continue smoking website, follows a beta distribution",
-                  "Probability continue smoking SoC, follows a beta distribution",
-                  "Probability relapse, which is same across treatments and follows a beta distribution",
-                  "Utility smoking, follows a Normal distribution",
-                  "Utility not smoking, follows a Normal distribution",
-                  "Cost website, fixed value and model assumes no cost of SoC and no state costs"),
-v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed"),
-m_hyperparameters = matrix(c(15, 85,
-                            12, 88,
-                            8, 92,
-                            0.95/2, 0.01,
-                            0.5, NA,
-                            50, NA), 
-                          nrow = 6, ncol = 2, byrow = TRUE,
-                          dimnames = list(NULL, c("hp_1", "hp_2")),
-                          m_transition = matrix(c(1, 2,
-                                                  1, 2,
-                                                  2, 1,
-                                                  NA, NA,
-                                                  NA, NA,
-                                                  NA, NA),
-                                                nrow = 6, ncol = 2, byrow = TRUE,
-                                                dimnames = list(NULL, c("from", "to"))),
-                          v_treatment = c(1, 2, NA, NA, NA, NA))) 
-
+1+1 
 
 ## ------------------------------------------------
 ## Method `input_parameters$sample_values`
 ## ------------------------------------------------
 
-markov_inputs$sample_values(n_samples = 1000)
+1+1
 
 ## ------------------------------------------------
 ## Method `input_parameters$specify_excel`
 ## ------------------------------------------------
 
-markov_inputs$specify_excel()
+1+1
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -87,10 +57,12 @@ Initialise the input parameters object
 \if{html}{\out{<div class="r">}}\preformatted{input_parameters$new(
   v_names,
   v_descriptions,
+  v_type,
   v_distributions,
   m_hyperparameters,
   m_transition,
-  v_treatment
+  v_treatment,
+  v_state
 )}\if{html}{\out{</div>}}
 }
 
@@ -101,6 +73,8 @@ Initialise the input parameters object
 
 \item{\code{v_descriptions}}{Vector of string descriptions of the parameters (can be NULL)}
 
+\item{\code{v_type}}{Vector of strings specifying type of parameter (e.g., transition_probability, one_off_cost, cost)}
+
 \item{\code{v_distributions}}{Vector of strings specifying distributions (options are fixed, beta, normal)}
 
 \item{\code{m_hyperparameters}}{Matrix of parameters of the corresponding distribution for this parameter (at least one value, and unused are NULL)}
@@ -108,6 +82,8 @@ Initialise the input parameters object
 \item{\code{m_transition}}{Matrix with from and to values identifying transitions which parameter informs (NA if not a transition probability parameter)}
 
 \item{\code{v_treatment}}{Numeric vector identifying the treatment to which this parameter corresponds (NA if all)}
+
+\item{\code{v_state}}{Numeric vector identifying the state to which this cost or utility parameter corresponds  (NA if all)}
 }
 \if{html}{\out{</div>}}
 }
@@ -116,37 +92,7 @@ input parameter object with df_spec giving specifications
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{markov_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
-"Probability quit smoking SoC",
-"Probability relapse",
-"Utility smoking",
-"Utility not smoking",
-"Cost website"),
-v_descriptions = c("Probability continue smoking website, follows a beta distribution",
-                  "Probability continue smoking SoC, follows a beta distribution",
-                  "Probability relapse, which is same across treatments and follows a beta distribution",
-                  "Utility smoking, follows a Normal distribution",
-                  "Utility not smoking, follows a Normal distribution",
-                  "Cost website, fixed value and model assumes no cost of SoC and no state costs"),
-v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed"),
-m_hyperparameters = matrix(c(15, 85,
-                            12, 88,
-                            8, 92,
-                            0.95/2, 0.01,
-                            0.5, NA,
-                            50, NA), 
-                          nrow = 6, ncol = 2, byrow = TRUE,
-                          dimnames = list(NULL, c("hp_1", "hp_2")),
-                          m_transition = matrix(c(1, 2,
-                                                  1, 2,
-                                                  2, 1,
-                                                  NA, NA,
-                                                  NA, NA,
-                                                  NA, NA),
-                                                nrow = 6, ncol = 2, byrow = TRUE,
-                                                dimnames = list(NULL, c("from", "to"))),
-                          v_treatment = c(1, 2, NA, NA, NA, NA))) 
-
+\preformatted{1+1 
 }
 \if{html}{\out{</div>}}
 
@@ -171,7 +117,7 @@ Function to generate random parameters based on the specification
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{markov_inputs$sample_values(n_samples = 1000)
+\preformatted{1+1
 }
 \if{html}{\out{</div>}}
 
@@ -200,7 +146,7 @@ Function to add specification of parameters in Excel format
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{markov_inputs$specify_excel()
+\preformatted{1+1
 }
 \if{html}{\out{</div>}}
 
