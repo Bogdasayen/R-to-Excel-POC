@@ -1,3 +1,6 @@
+require(R6)
+require(openxlsx)
+
 #' The Markov model class
 #' @description Markov model class
 #' 
@@ -30,8 +33,6 @@
 #' @examples
 #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
 #' 
-#' @import R6
-#' @import openxlsx2
 #' @export
 markov_model <- R6Class("markov_model", list(
   # Assign variable for all public elements of the class
@@ -577,16 +578,14 @@ markov_model <- R6Class("markov_model", list(
     )
     
     # Add the model settings to the Excel workbook
-    
-                                    
-    
     wb$add_data(
       sheet = "model_settings",
+      x = self$df_excel_model_settings,
       start_row = startRow,
       start_col = startCol,
-      x = self$df_excel_model_settings,
       na.strings = NULL
     )
+    
     # Specify the Excel locations of the parameter values
     # These are used in the Markov trace
     self$markov_inputs$specify_excel(sheet = "input_parameters", 
@@ -594,16 +593,14 @@ markov_model <- R6Class("markov_model", list(
                                      startRow = startRow)
     
     # Add the input parameters, including random sampling formulae, to the Excel workbook
-    
-    
-    
     wb$add_data(
       sheet = "input_parameters",
+      x = self$markov_inputs$df_spec,
       start_row = startRow,
       start_col = startCol,
-      x = self$markov_inputs$df_spec,
       na.strings = NULL
     )
+    
     # Generate formulae for the state costs using input parameters
     df_state_costs <- data.frame(matrix("", ncol = self$n_treatments * self$n_states, nrow = 1))
     
@@ -651,9 +648,9 @@ markov_model <- R6Class("markov_model", list(
     # Add the state costs to the Excel workbook
     wb$add_data(
       sheet = "state_costs",
+      x = df_state_costs,
       start_row = startRow,
       start_col = startCol,
-      x = df_state_costs,
       na.strings = NULL
     )
 
@@ -703,9 +700,9 @@ markov_model <- R6Class("markov_model", list(
     # Add the state QALYs to the Excel workbook
     wb$add_data(
       sheet = "state_qalys",
+      x = df_state_qalys,
       start_row = startRow,
       start_col = startCol,
-      x = df_state_qalys,
       na.strings = NULL
     )
 
@@ -738,7 +735,7 @@ markov_model <- R6Class("markov_model", list(
           cell_formula_temp[i_cycle] <- paste0(LETTERS[startCol + 
                                                          (i_treatment - 1) * self$n_states +
                                                          i_state], previous_row,
-                                               " * (1- ",
+                                               " * (1 - ",
                                                if (sum_probabilities_from == "") 0 else sum_probabilities_from, ")")
           # Now append the probabilities of entering the state
           from_prob_formulae <- c()
@@ -882,9 +879,9 @@ markov_model <- R6Class("markov_model", list(
     # Add the markov trace with costs and QALYs to the Excel workbook
     wb$add_data(
       sheet = "markov_trace",
+      x = df_markov_trace,
       start_row = startRow,
       start_col = startCol,
-      x = df_markov_trace,
       na.strings = NULL
     )
 
@@ -905,9 +902,9 @@ markov_model <- R6Class("markov_model", list(
     
     wb$add_data(
       sheet = "PSA",
+      x = df_psa_settings,
       start_row = psa_startRow,
       start_col = psa_startCol,
-      x = df_psa_settings,
       na.strings = NULL
     )
 
@@ -959,12 +956,11 @@ markov_model <- R6Class("markov_model", list(
     
     names(df_results) <- c("Result", self$v_treatment_names)
 
-
     wb$add_data(
       sheet = "Results",
+      x = df_results,
       start_row = startRow,
       start_col = startCol,
-      x = df_results,
       na.strings = NULL
     )
 
