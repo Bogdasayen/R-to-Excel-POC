@@ -148,3 +148,5 @@ markov_hips$a_cohort_array["uncemented", 1, , ]
 
 # For comparison with Excel, average time in each state across PSA samples
 apply(markov_hips$a_cohort_array, c(1, 4), mean)
+
+openxlsx2::xl_open("output/test_output_hips_1.xlsm")

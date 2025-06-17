@@ -1,4 +1,5 @@
 library(openxlsx)
+# TODO could be changed, was to lazy late at night
 
 output_wb <- loadWorkbook(file = "output/test_output_1_1.xlsm", isUnzipped = FALSE)
 
