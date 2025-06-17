@@ -141,8 +141,8 @@ input_parameters <- R6Class("markov_model", list(
     excel_formulae <- rep("", self$n_parameters)
     
     # In which column letters would the hyper parameters be stored
-    hp_1_col <- LETTERS[startCol + which(names(self$df_spec) == "hp_1") - 1]
-    hp_2_col <- LETTERS[startCol + which(names(self$df_spec) == "hp_2") - 1]
+    hp_1_col <- openxlsx2::int2col(startCol + which(names(self$df_spec) == "hp_1") - 1)
+    hp_2_col <- openxlsx2::int2col(startCol + which(names(self$df_spec) == "hp_2") - 1)
     
     # Export the Excel equivalent of each distribution function
     for(i_parameter in 1:self$n_parameters) {
@@ -173,7 +173,7 @@ input_parameters <- R6Class("markov_model", list(
     # Specify the cell holding the sampled value
     excel_value_location <- rep(paste0(sheet, 
                                        "!", 
-                                       LETTERS[startCol + which(names(self$df_spec) == "excel_formulae") - 1], 
+                                       openxlsx2::int2col(startCol + which(names(self$df_spec) == "excel_formulae") - 1), 
                                        c((startRow + 1):(startRow + self$n_parameters))))
     self$df_spec$excel_value_location <- excel_value_location
     
