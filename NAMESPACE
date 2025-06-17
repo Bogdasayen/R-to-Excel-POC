@@ -3,3 +3,7 @@
 export(input_parameters)
 export(markov_model)
 export(scratch_class)
+export(summarise_samples)
+import(R6)
+import(openxlsx2)
+importFrom(stats,quantile)
