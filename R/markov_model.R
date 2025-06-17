@@ -573,7 +573,7 @@ markov_model <- R6Class("markov_model", list(
                                                            self$n_treatments),
                                                "Modifiable" = c(rep("Y", 5), rep("N", 5)),
                                                "excel_value_location" = paste0("model_settings!",
-                                                                               LETTERS[startCol + 1], 
+                                                                               openxlsx2::int2col(startCol + 1), 
                                                                                startRow + c(1:10))
     )
     
@@ -732,9 +732,9 @@ markov_model <- R6Class("markov_model", list(
           previous_row <- startRow + i_cycle - 1
           
           # Cell with probability of being in state at previous cycle
-          cell_formula_temp[i_cycle] <- paste0(LETTERS[startCol + 
+          cell_formula_temp[i_cycle] <- paste0(openxlsx2::int2col(startCol + 
                                                          (i_treatment - 1) * self$n_states +
-                                                         i_state], previous_row,
+                                                         i_state), previous_row,
                                                " * (1 - ",
                                                if (sum_probabilities_from == "") 0 else sum_probabilities_from, ")")
           # Now append the probabilities of entering the state
@@ -749,9 +749,9 @@ markov_model <- R6Class("markov_model", list(
             if(sum(from_j_to_i_index, na.rm = TRUE) == 1) {
               # Add probability of being in j multiplied by probability of going to i
               from_prob_formulae <- c(from_prob_formulae,
-                                      paste0(LETTERS[startCol + 
+                                      paste0(openxlsx2::int2col(startCol + 
                                                        (i_treatment - 1) * self$n_states +
-                                                       j_state], previous_row,
+                                                       j_state), previous_row,
                                              " * ",
                                              self$markov_inputs$df_spec$excel_value_location[which(from_j_to_i_index)]))
               
@@ -814,23 +814,23 @@ markov_model <- R6Class("markov_model", list(
         # Now add ongoing costs and qalys
         cycle_costs_temp[i_cycle] <- 
           # Sum the product of probabilities and state occupancy costs
-          paste0(paste0(LETTERS[startCol + 
+          paste0(paste0(openxlsx2::int2col(startCol + 
                            (i_treatment - 1) * self$n_states +
-                           c(1:self$n_states)], startRow + i_cycle, 
+                           c(1:self$n_states)), startRow + i_cycle, 
                  " * ",
-                 "state_costs!", LETTERS[startCol +
+                 "state_costs!", openxlsx2::int2col(startCol +
                                            (i_treatment - 1) * self$n_states +
-                                           c(1:self$n_states) - 1], startRow + 1), collapse = " + ")
+                                           c(1:self$n_states) - 1), startRow + 1), collapse = " + ")
         
         cycle_qalys_temp[i_cycle] <- 
           # Sum the product of probabilities and state qalys
-          paste0(paste0(LETTERS[startCol + 
+          paste0(paste0(openxlsx2::int2col(startCol + 
                            (i_treatment - 1) * self$n_states +
-                           c(1:self$n_states)], startRow + i_cycle, 
+                           c(1:self$n_states)), startRow + i_cycle, 
                  " * ",
-                 "state_qalys!", LETTERS[startCol +
+                 "state_qalys!", openxlsx2::int2col(startCol +
                                            (i_treatment - 1) * self$n_states +
-                                           c(1:self$n_states) - 1], startRow + 1), collapse = " + ")
+                                           c(1:self$n_states) - 1), startRow + 1), collapse = " + ")
         
         # Continuous discounting
         cycle_costs_disc_temp[i_cycle] <- paste0("(",
@@ -923,28 +923,28 @@ markov_model <- R6Class("markov_model", list(
     for(i_treatment in 1:self$n_treatments) {
       col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
                                                                                            " Discounted Costs"))
-      treatment_results_temp["Total Costs", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      treatment_results_temp["Total Costs", ]  <- paste0("SUM(markov_trace!", openxlsx2::int2col(col_temp), startRow + 1, ":markov_trace!", openxlsx2::int2col(col_temp), startRow + 1 + self$n_cycles, ")")
       
       col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
                                                                            " Discounted QALYs"))
-      treatment_results_temp["Total QALYs", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      treatment_results_temp["Total QALYs", ]  <- paste0("SUM(markov_trace!", openxlsx2::int2col(col_temp), startRow + 1, ":markov_trace!", openxlsx2::int2col(col_temp), startRow + 1 + self$n_cycles, ")")
       
       col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
                                                                            " Undiscounted Costs"))
-      treatment_results_temp["Total Costs (undiscounted)", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      treatment_results_temp["Total Costs (undiscounted)", ]  <- paste0("SUM(markov_trace!", openxlsx2::int2col(col_temp), startRow + 1, ":markov_trace!", openxlsx2::int2col(col_temp), startRow + 1 + self$n_cycles, ")")
       
       col_temp <- startCol - 1 + which(colnames(df_markov_trace) == paste0(self$v_treatment_names[i_treatment],
                                                                            " Undiscounted QALYs"))
-      treatment_results_temp["Total QALYs (undiscounted)", ]  <- paste0("SUM(markov_trace!", LETTERS[col_temp], startRow + 1, ":markov_trace!", LETTERS[col_temp], startRow + 1 + self$n_cycles, ")")
+      treatment_results_temp["Total QALYs (undiscounted)", ]  <- paste0("SUM(markov_trace!", openxlsx2::int2col(col_temp), startRow + 1, ":markov_trace!", openxlsx2::int2col(col_temp), startRow + 1 + self$n_cycles, ")")
       
       # Calculating cell locations within the results sheet
-      treatment_results_temp["Incremental Costs", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 1, " - ", 
-        LETTERS[startCol + i_reference_treatment], startRow + 1)
-      treatment_results_temp["Incremental QALYs", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 2, " - ",
-        LETTERS[startCol + i_reference_treatment], startRow + 2)
+      treatment_results_temp["Incremental Costs", ] <- paste0(openxlsx2::int2col(startCol + i_treatment), startRow + 1, " - ", 
+        openxlsx2::int2col(startCol + i_reference_treatment), startRow + 1)
+      treatment_results_temp["Incremental QALYs", ] <- paste0(openxlsx2::int2col(startCol + i_treatment), startRow + 2, " - ",
+        openxlsx2::int2col(startCol + i_reference_treatment), startRow + 2)
       if(i_treatment != i_reference_treatment) {
-        treatment_results_temp["ICER", ] <- paste0(LETTERS[startCol + i_treatment], startRow + 1, " / ",
-          LETTERS[startCol + i_treatment], startRow + 2)
+        treatment_results_temp["ICER", ] <- paste0(openxlsx2::int2col(startCol + i_treatment), startRow + 1, " / ",
+          openxlsx2::int2col(startCol + i_treatment), startRow + 2)
       } else {
         # Don't calculate an ICER if it's the reference
         treatment_results_temp["ICER", ] <- ""
