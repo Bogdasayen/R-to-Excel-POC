@@ -5,7 +5,8 @@
 # Medical School short course examples from Advanced Markov Models
 # Howard Thom, Clifton Insight 20-October-2024
 
-library(R2ExcelPOC)
+# To load the library would first need to click the menu "Build"  and button "Install"
+# library(R2ExcelPOC)
 
 set.seed(2345295)
 
@@ -13,7 +14,7 @@ set.seed(2345295)
 #roxygen2::roxygenise()
 
 # Load necessary functions from the package
-# devtools::load_all()
+devtools::load_all()
 
 state_names = c("post_thr", "post_1st_rev", "post_2nd_rev", "dead")
 treatment_names = c("cemented", "uncemented", "hybrid", "reverse_hybrid")

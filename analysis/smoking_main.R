@@ -5,7 +5,8 @@
 # Medical School short course examples from Intro to EE and EE Modelling using R
 # Howard Thom, Clifton Insight 20-October-2024
 
-library(R2ExcelPOC)
+# To load the library would first need to click the menu "Build"  and button "Install"
+# library(R2ExcelPOC)
 
 set.seed(2345295)
 
@@ -13,7 +14,7 @@ set.seed(2345295)
 #roxygen2::roxygenise()
 
 # Load necessary functions from the package
-# devtools::load_all()
+devtools::load_all()
 
 # Specify the input parameters for the Markov smoking model
 smoking_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
