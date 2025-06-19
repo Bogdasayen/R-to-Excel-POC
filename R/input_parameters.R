@@ -1,5 +1,3 @@
-require(R6)
-
 #' The input parameters class
 #' @description Class to store input parameter specification and samples for models
 #'
@@ -84,7 +82,7 @@ input_parameters <- R6Class(
       v_treatment,
       v_state
     ) {
-      self$n_parameters = length(v_names)
+      self$n_parameters <- length(v_names)
       self$df_spec <- data.frame(
         v_names,
         v_descriptions,
@@ -95,7 +93,7 @@ input_parameters <- R6Class(
         v_treatment,
         v_state
       )
-      self$m_values = NULL
+      self$m_values <- NULL
     }, # End initialize function
 
     #' @description
@@ -107,7 +105,7 @@ input_parameters <- R6Class(
     #' @export
     #'
     sample_values = function(n_samples) {
-      self$n_samples = n_samples
+      self$n_samples <- n_samples
       self$m_values <- matrix(
         NA,
         nrow = self$n_samples,
@@ -115,7 +113,7 @@ input_parameters <- R6Class(
         dimnames = list(NULL, self$df_spec$v_names)
       )
 
-      for (i_parameter in 1:self$n_parameters) {
+      for (i_parameter in seq_len(self$n_parameters)) {
         if (self$df_spec$v_distributions[i_parameter] == "beta") {
           self$m_values[, i_parameter] <- rbeta(
             self$n_samples,

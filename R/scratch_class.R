@@ -72,17 +72,17 @@ scratch_class <- R6Class(
       markov_inputs,
       v_init_cohort
     ) {
-      self$n_states = n_states
-      self$n_cycles = n_cycles
-      self$n_samples = n_samples
-      self$n_treatments = n_treatments
-      self$v_state_names = v_state_names
-      self$v_treatment_names = v_treatment_names
-      self$lambda = lambda
-      self$costs_dr = costs_dr
-      self$qalys_dr = qalys_dr
-      self$markov_inputs = markov_inputs
-      self$v_init_cohort = v_init_cohort
+      self$n_states <- n_states
+      self$n_cycles <- n_cycles
+      self$n_samples <- n_samples
+      self$n_treatments <- n_treatments
+      self$v_state_names <- v_state_names
+      self$v_treatment_names <- v_treatment_names
+      self$lambda <- lambda
+      self$costs_dr <- costs_dr
+      self$qalys_dr <- qalys_dr
+      self$markov_inputs <- markov_inputs
+      self$v_init_cohort <- v_init_cohort
     }
   ) # End of public list
 ) # End of R6Class

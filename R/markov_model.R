@@ -104,19 +104,19 @@ markov_model <- R6Class(
       markov_inputs,
       v_init_cohort
     ) {
-      self$n_states = n_states
-      self$n_cycles = n_cycles
-      self$cycle_length = cycle_length
-      self$n_parameters = nrow(markov_inputs$df_spec)
-      self$n_samples = n_samples
-      self$n_treatments = n_treatments
-      self$v_state_names = v_state_names
-      self$v_treatment_names = v_treatment_names
-      self$lambda = lambda
-      self$costs_dr = costs_dr
-      self$qalys_dr = qalys_dr
-      self$markov_inputs = markov_inputs
-      self$v_init_cohort = v_init_cohort
+      self$n_states <- n_states
+      self$n_cycles <- n_cycles
+      self$cycle_length <- cycle_length
+      self$n_parameters <- nrow(markov_inputs$df_spec)
+      self$n_samples <- n_samples
+      self$n_treatments <- n_treatments
+      self$v_state_names <- v_state_names
+      self$v_treatment_names <- v_treatment_names
+      self$lambda <- lambda
+      self$costs_dr <- costs_dr
+      self$qalys_dr <- qalys_dr
+      self$markov_inputs <- markov_inputs
+      self$v_init_cohort <- v_init_cohort
     }, # End initialize function
 
     #' @description
@@ -178,7 +178,7 @@ markov_model <- R6Class(
             self$markov_inputs$m_values[, i_parameter]
         } else {
           # Not treatment specific
-          self$a_transition_matrices[,,
+          self$a_transition_matrices[, ,
             self$markov_inputs$df_spec$from[i_parameter],
             self$markov_inputs$df_spec$to[i_parameter]
           ] <-
@@ -325,7 +325,7 @@ markov_model <- R6Class(
       )
 
       # Set starting value for the cohort
-      self$a_cohort_array[,, 1, ] <- rep(
+      self$a_cohort_array[, , 1, ] <- rep(
         self$v_init_cohort,
         each = self$n_treatments * self$n_samples
       )
@@ -770,7 +770,7 @@ markov_model <- R6Class(
 
       # Set each empty element to zero
       # and each element to be a formula
-      for (i in 1:length(df_state_costs)) {
+      for (i in seq_along(df_state_costs)) {
         if (df_state_costs[, i] == "") {
           df_state_costs[, i] <- 0
         }
@@ -842,7 +842,7 @@ markov_model <- R6Class(
       } # End loop over parameters
 
       # Set each element to be a formula
-      for (i in 1:length(df_state_qalys)) {
+      for (i in seq_along(df_state_qalys)) {
         class(df_state_qalys[, i]) <- c(class(df_state_qalys[, i]), "formula")
       }
 
