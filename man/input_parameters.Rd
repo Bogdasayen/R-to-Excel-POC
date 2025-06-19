@@ -12,19 +12,78 @@ Class to store input parameter specification and samples for models
 ## Method `input_parameters$new`
 ## ------------------------------------------------
 
-1+1 
+markov_inputs <- input_parameters$new(
+  v_names = c(
+    "Probability quit smoking website",
+    "Probability quit smoking SoC",
+    "Probability relapse",
+    "Utility smoking",
+    "Utility not smoking",
+    "Cost website",
+    "Cost GP smoking",
+    "Cost statin smoking"
+  ),
+  v_descriptions = c(
+    "Probability continue smoking website, follows a beta distribution",
+    "Probability continue smoking SoC, follows a beta distribution",
+    "Probability relapse, which is same across treatments and follows a beta distribution",
+    "Utility smoking, follows a Normal distribution",
+    "Utility not smoking, follows a Normal distribution",
+    "Cost website, fixed value and model assumes no cost of SoC and no state costs",
+    "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
+    "Cost of roughly 20\% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"
+  ),
+  v_type = c(
+    "transition_probability",
+    "transition_probability",
+    "transition_probability",
+    "utility",
+    "utility",
+    "one_off_cost",
+    "cost",
+    "cost"
+  ),
+  v_distributions = c(
+    "beta",
+    "beta",
+    "beta",
+    "normal",
+    "fixed",
+    "fixed",
+    "normal",
+    "normal"
+  ),
+  m_hyperparameters = matrix(
+    c(15, 85, 12, 88, 8, 92, 0.95, 0.02, 1.0, NA, 50, NA, 49, 2, 0.69, 0.069),
+    nrow = 8,
+    ncol = 2,
+    byrow = TRUE,
+    dimnames = list(NULL, c("hp_1", "hp_2"))
+  ),
+  m_transition = matrix(
+    c(1, 2, 1, 2, 2, 1, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+    nrow = 8,
+    ncol = 2,
+    byrow = TRUE,
+    dimnames = list(NULL, c("from", "to"))
+  ),
+  v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
+  v_state = c(1, 1, 2, 1, 2, NA, 1, 1)
+)
 
 ## ------------------------------------------------
 ## Method `input_parameters$sample_values`
 ## ------------------------------------------------
 
-1+1
+markov_inputs$sample_values(n_samples = 1000)
 
 ## ------------------------------------------------
 ## Method `input_parameters$specify_excel`
 ## ------------------------------------------------
 
-1+1
+markov_inputs$specify_excel(
+  sheet = "input_parameters"
+)
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -92,7 +151,64 @@ input parameter object with df_spec giving specifications
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{1+1 
+\preformatted{markov_inputs <- input_parameters$new(
+  v_names = c(
+    "Probability quit smoking website",
+    "Probability quit smoking SoC",
+    "Probability relapse",
+    "Utility smoking",
+    "Utility not smoking",
+    "Cost website",
+    "Cost GP smoking",
+    "Cost statin smoking"
+  ),
+  v_descriptions = c(
+    "Probability continue smoking website, follows a beta distribution",
+    "Probability continue smoking SoC, follows a beta distribution",
+    "Probability relapse, which is same across treatments and follows a beta distribution",
+    "Utility smoking, follows a Normal distribution",
+    "Utility not smoking, follows a Normal distribution",
+    "Cost website, fixed value and model assumes no cost of SoC and no state costs",
+    "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
+    "Cost of roughly 20\% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"
+  ),
+  v_type = c(
+    "transition_probability",
+    "transition_probability",
+    "transition_probability",
+    "utility",
+    "utility",
+    "one_off_cost",
+    "cost",
+    "cost"
+  ),
+  v_distributions = c(
+    "beta",
+    "beta",
+    "beta",
+    "normal",
+    "fixed",
+    "fixed",
+    "normal",
+    "normal"
+  ),
+  m_hyperparameters = matrix(
+    c(15, 85, 12, 88, 8, 92, 0.95, 0.02, 1.0, NA, 50, NA, 49, 2, 0.69, 0.069),
+    nrow = 8,
+    ncol = 2,
+    byrow = TRUE,
+    dimnames = list(NULL, c("hp_1", "hp_2"))
+  ),
+  m_transition = matrix(
+    c(1, 2, 1, 2, 2, 1, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+    nrow = 8,
+    ncol = 2,
+    byrow = TRUE,
+    dimnames = list(NULL, c("from", "to"))
+  ),
+  v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
+  v_state = c(1, 1, 2, 1, 2, NA, 1, 1)
+)
 }
 \if{html}{\out{</div>}}
 
@@ -117,7 +233,7 @@ Function to generate random parameters based on the specification
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{1+1
+\preformatted{markov_inputs$sample_values(n_samples = 1000)
 }
 \if{html}{\out{</div>}}
 
@@ -146,7 +262,9 @@ Function to add specification of parameters in Excel format
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{1+1
+\preformatted{markov_inputs$specify_excel(
+  sheet = "input_parameters"
+)
 }
 \if{html}{\out{</div>}}
 

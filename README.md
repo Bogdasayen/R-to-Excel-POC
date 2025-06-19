@@ -1,6 +1,16 @@
 # R-to-Excel-POC
 Proof of Excel for cost-effectiveness model template that exports an Excel version
 
+## Installation
+
+``` r
+# install.packages("remotes")
+remotes::install_github("Bogdasayen/R-to-Excel-POC")
+
+# load the library
+library(R2ExcelPOC)
+```
+
 From within RStudio click on “File” and then "Open Project..." and then navigate to “R-to-Excel-POC.Rproj”
 
 Ensure you see the text "R-to-Excel-POC" in the top right corner of RStudio
@@ -14,4 +24,3 @@ Load the Excel sheet “output/test_output_1_1.xlsm” in Excel and navigate to 
 Click the “Run PSA” button and look at total times in state, costs, and QALYs in J3:U3
 
 Comparing these verifies that the R and Excel models are approximately in agreement. 
-

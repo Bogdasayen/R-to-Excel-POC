@@ -3,9 +3,15 @@ Type: Package
 Title: Proof of concept for R to Excel conversion
 Authors@R: 
     person("Howard", "Thom", , "howard.thom@cliftoninsight.co.uk", role = c("aut", "cre"))
-Description: Proves feasibility of automatic conversion of health economic models from R to Excel
-License: MIT + LICENSE
+Description: Proves feasibility of automatic conversion of health economic models from R to Excel.
+License: MIT + file LICENCE
 Version: 0.0.1.0
+Language: en-GB
+URL: https://github.com/Bogdasayen/R-to-Excel-POC
+BugReports: https://github.com/Bogdasayen/R-to-Excel-POC/issues
 RoxygenNote: 7.3.2
 Imports: R6, openxlsx2
 Encoding: UTF-8
+Depends: 
+    R (>= 3.5)
+LazyData: true
