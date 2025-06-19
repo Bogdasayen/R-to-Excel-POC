@@ -16,8 +16,8 @@
 #' @field a_cohort_array Array of cohort vectors with dimensions n_treatments x n_samples x n_cycles x n_states
 #' @field v_init_cohort Initial cohort vector shared across treatments and samples
 #' @examples
-#' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
-#'
+#' data(smoking)
+#' smoking_inputs <- do.call(input_parameters$new, smoking)
 #' @export
 scratch_class <- R6Class(
   "scratch_class",
@@ -57,7 +57,20 @@ scratch_class <- R6Class(
     #' @param v_init_cohort Vector representing initial proportion in each cohort
     #' @return An initialised Markov model
     #' @examples
-    #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+    #' markov_smoking <- markov_model$new(
+    #'   n_states = 2,
+    #'   n_cycles = 10,
+    #'   cycle_length = 0.5,
+    #'   n_samples = 1000,
+    #'   n_treatments = 2,
+    #'   v_state_names = c("Smoking", "Not smoking"),
+    #'   v_treatment_names = c("SoC", "SoC with website"),
+    #'   lambda = 20000,
+    #'   costs_dr = 0.035,
+    #'   qalys_dr = 0.035,
+    #'   markov_inputs = smoking_inputs,
+    #'   v_init_cohort = c(1, 0)
+    #' )
     #' @export
     initialize = function(
       n_states,

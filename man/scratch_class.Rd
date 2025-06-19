@@ -7,14 +7,27 @@
 Markov model class
 }
 \examples{
-markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
-
+data(smoking)
+smoking_inputs <- do.call(input_parameters$new, smoking)
 
 ## ------------------------------------------------
 ## Method `scratch_class$new`
 ## ------------------------------------------------
 
-markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+markov_smoking <- markov_model$new(
+  n_states = 2,
+  n_cycles = 10,
+  cycle_length = 0.5,
+  n_samples = 1000,
+  n_treatments = 2,
+  v_state_names = c("Smoking", "Not smoking"),
+  v_treatment_names = c("SoC", "SoC with website"),
+  lambda = 20000,
+  costs_dr = 0.035,
+  qalys_dr = 0.035,
+  markov_inputs = smoking_inputs,
+  v_init_cohort = c(1, 0)
+)
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -111,7 +124,20 @@ An initialised Markov model
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+\preformatted{markov_smoking <- markov_model$new(
+  n_states = 2,
+  n_cycles = 10,
+  cycle_length = 0.5,
+  n_samples = 1000,
+  n_treatments = 2,
+  v_state_names = c("Smoking", "Not smoking"),
+  v_treatment_names = c("SoC", "SoC with website"),
+  lambda = 20000,
+  costs_dr = 0.035,
+  qalys_dr = 0.035,
+  markov_inputs = smoking_inputs,
+  v_init_cohort = c(1, 0)
+)
 }
 \if{html}{\out{</div>}}
 

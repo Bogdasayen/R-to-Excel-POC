@@ -28,7 +28,9 @@
 #' @field v_init_cohort Initial cohort vector shared across treatments and samples
 #' @field df_excel_model_settings Data frame giving settings of model exported to Excel (only updated on calling export_to_excel())
 #' @examples
-#' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, cycle_length = 0.5, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035)
+#' # input data
+#' data(smoking)
+#' smoking_inputs <- do.call(input_parameters$new, smoking)
 #'
 #' @import R6
 #' @import openxlsx2
@@ -88,7 +90,20 @@ markov_model <- R6Class(
     #' @param v_init_cohort Vector representing initial proportion in each cohort
     #' @return An initialised Markov model
     #' @examples
-    #' markov_smoking <- markov_model$new(n_states = 2, n_cycles = 10, n_samples = 1000, n_treatments = 2, v_state_names = c("Smoking", "Not smoking"), v_treatment_names = c("SoC", "SoC with website"), lambda = 20000, costs_dr = 0.035, qalys_dr = 0.035, markov_inputs = smoking_inputs, v_init_cohort = c(1, 0))
+    #' smoking_markov_model <- markov_model$new(
+    #'   n_states = 2,
+    #'   n_cycles = 10,
+    #'   cycle_length = 0.5,
+    #'   n_samples = 1000,
+    #'   n_treatments = 2,
+    #'   v_state_names = c("Smoking", "Not smoking"),
+    #'   v_treatment_names = c("SoC", "SoC with website"),
+    #'   lambda = 20000,
+    #'   costs_dr = 0.035,
+    #'   qalys_dr = 0.035,
+    #'   markov_inputs = smoking_inputs,
+    #'   v_init_cohort = c(1, 0)
+    #' )
     #' @export
     initialize = function(
       n_states,
@@ -512,7 +527,11 @@ markov_model <- R6Class(
     #' @param currency_symbol String with currency symbol to use for row names
     #' @return Matrix with column for each treatment and rows with costs, QALY, ICER and benefit summries
     #' @examples
-    #' smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
+    #' smoking_markov_model$generate_results_table(
+    #'   i_reference_treatment = 1,
+    #'   v_wtp = 150000,
+    #'   currency_symbol = "$"
+    #' )
     #' @export
 
     generate_results_table = function(
@@ -613,10 +632,21 @@ markov_model <- R6Class(
     #' @param psa_startRow Location of cells to which numbers of states, treatments, and cycles are added
     #' @param i_reference_treatment Index for reference treatment (default 1)
     #' @examples
-    #' smoking_markov_model$export_to_excel("output/test_workbook.xlsx", startCol = 5, startRow = 8)
-    #' smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, startRow = 8, psa_startCol = 5, psa_startRow = 1)
+    #' xlsx <- tempfile(fileext = ".xlsx")
+    #' smoking_markov_model$export_to_excel(
+    #'   xlsx,
+    #'   startCol = 5,
+    #'   startRow = 8
+    #' )
+    #' xlsm <- tempfile(fileext = ".xlsm")
+    #' smoking_markov_model$export_to_excel(
+    #'   xlsm,
+    #'   startCol = 5,
+    #'   startRow = 8,
+    #'   psa_startCol = 5,
+    #'   psa_startRow = 1
+    #' )
     #' @export
-    #'
     export_to_excel = function(
       wb_filename,
       startCol = 5,
@@ -625,9 +655,14 @@ markov_model <- R6Class(
       psa_startRow = 1,
       i_reference_treatment = 1
     ) {
-      wb <- openxlsx2::wb_load(
-        file = system.file("ext", "template.xlsm", package = "R2ExcelPOC")
-      )
+      if (tools::file_ext(tolower(wb_filename)) == "xlsm") {
+        wb <- openxlsx2::wb_load(
+          file = system.file("ext", "template.xlsm", package = "R2ExcelPOC")
+        )
+      } else {
+        wb <- wb_workbook()
+      }
+
       sheet_names <- wb$get_sheet_names()
       # Add the necessary sheets if not already included
       if (!is.element("model_settings", sheet_names)) {

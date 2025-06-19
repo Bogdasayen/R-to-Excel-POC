@@ -33,44 +33,64 @@ input_parameters <- R6Class(
     #' @param v_state Numeric vector identifying the state to which this cost or utility parameter corresponds  (NA if all)
     #' @return input parameter object with df_spec giving specifications
     #' @examples
-    #' markov_inputs <- input_parameters$new(v_names = c("Probability quit smoking website",
-    #'"Probability quit smoking SoC",
-    #'"Probability relapse",
-    #'"Utility smoking",
-    #'"Utility not smoking",
-    #'"Cost website"),
-    #'v_descriptions = c("Probability continue smoking website, follows a beta distribution",
-    #'                   "Probability continue smoking SoC, follows a beta distribution",
-    #'                   "Probability relapse, which is same across treatments and follows a beta distribution",
-    #'                   "Utility smoking, follows a Normal distribution",
-    #'                   "Utility not smoking, follows a Normal distribution",
-    #'                   "Cost website, fixed value and model assumes no cost of SoC and no state costs"
-    #'                   "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
-    #'                   "Cost of roughly 20% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"),
-    #' v_type = c("transition_probability", "transition_probability", "transition_probability", "utility", "utility", "one_off_cost", "cost", "cost"),
-    #'v_distributions = c("beta", "beta", "beta", "normal", "fixed", "fixed", "normal", "normal"),
-    #'m_hyperparameters = matrix(c(15, 85,
-    #'                             12, 88,
-    #'                             8, 92,
-    #'                             0.95, 0.02,
-    #'                             1.0, NA,
-    #'                             50, NA,
-    #'                              49, 2,
-    #'                             0.69, 0.069),
-    #'                           nrow = 8, ncol = 2, byrow = TRUE,
-    #'                           dimnames = list(NULL, c("hp_1", "hp_2"))),
-    #' m_transition = matrix(c(1, 2,
-    #'                                                   1, 2,
-    #'                                                   2, 1,
-    #'                                                   NA, NA,
-    #'                                                   NA, NA,
-    #'                                                   NA, NA,
-    #'                                                   NA, NA),
-    #'                                                 nrow = 8, ncol = 2, byrow = TRUE,
-    #'                                                 dimnames = list(NULL, c("from", "to"))),
-    #' v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
-    #' v_state = c(1, 1, 2, 1, 2, NA, 1, 1))
-    #'
+    #' markov_inputs <- input_parameters$new(
+    #'   v_names = c(
+    #'     "Probability quit smoking website",
+    #'     "Probability quit smoking SoC",
+    #'     "Probability relapse",
+    #'     "Utility smoking",
+    #'     "Utility not smoking",
+    #'     "Cost website",
+    #'     "Cost GP smoking",
+    #'     "Cost statin smoking"
+    #'   ),
+    #'   v_descriptions = c(
+    #'     "Probability continue smoking website, follows a beta distribution",
+    #'     "Probability continue smoking SoC, follows a beta distribution",
+    #'     "Probability relapse, which is same across treatments and follows a beta distribution",
+    #'     "Utility smoking, follows a Normal distribution",
+    #'     "Utility not smoking, follows a Normal distribution",
+    #'     "Cost website, fixed value and model assumes no cost of SoC and no state costs",
+    #'     "Cost of 6-monthly, on average, GP visit (£49 from PRSSU) for smoking related illness, follows Normal distribution",
+    #'     "Cost of roughly 20% of smokers taking statins (pravastatin at £3.45 per month), follows Normal distribution"
+    #'   ),
+    #'   v_type = c(
+    #'     "transition_probability",
+    #'     "transition_probability",
+    #'     "transition_probability",
+    #'     "utility",
+    #'     "utility",
+    #'     "one_off_cost",
+    #'     "cost",
+    #'     "cost"
+    #'   ),
+    #'   v_distributions = c(
+    #'     "beta",
+    #'     "beta",
+    #'     "beta",
+    #'     "normal",
+    #'     "fixed",
+    #'     "fixed",
+    #'     "normal",
+    #'     "normal"
+    #'   ),
+    #'   m_hyperparameters = matrix(
+    #'     c(15, 85, 12, 88, 8, 92, 0.95, 0.02, 1.0, NA, 50, NA, 49, 2, 0.69, 0.069),
+    #'     nrow = 8,
+    #'     ncol = 2,
+    #'     byrow = TRUE,
+    #'     dimnames = list(NULL, c("hp_1", "hp_2"))
+    #'   ),
+    #'   m_transition = matrix(
+    #'     c(1, 2, 1, 2, 2, 1, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+    #'     nrow = 8,
+    #'     ncol = 2,
+    #'     byrow = TRUE,
+    #'     dimnames = list(NULL, c("from", "to"))
+    #'   ),
+    #'   v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
+    #'   v_state = c(1, 1, 2, 1, 2, NA, 1, 1)
+    #' )
     #' @export
     initialize = function(
       v_names,
@@ -143,9 +163,10 @@ input_parameters <- R6Class(
     #' @param startCol Column number from which the input parameters are added
     #' @param startRow Row number from which the input parameters are added
     #' @examples
-    #' markov_inputs$specify_excel()
+    #' markov_inputs$specify_excel(
+    #'   sheet = "input_parameters"
+    #' )
     #' @export
-    #'
     specify_excel = function(sheet, startCol = 1, startRow = 1) {
       excel_formulae <- rep("", self$n_parameters)
 
