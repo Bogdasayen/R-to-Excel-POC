@@ -7,14 +7,30 @@
 Markov model class
 }
 \examples{
-1+1
+# input data
+data(smoking)
+smoking_inputs <- do.call(input_parameters$new, smoking)
 
 
 ## ------------------------------------------------
 ## Method `markov_model$new`
 ## ------------------------------------------------
 
-1+1
+
+smoking_markov_model <- markov_model$new(
+  n_states = 2,
+  n_cycles = 10,
+  cycle_length = 0.5,
+  n_samples = 1000,
+  n_treatments = 2,
+  v_state_names = c("Smoking", "Not smoking"),
+  v_treatment_names = c("SoC", "SoC with website"),
+  lambda = 20000,
+  costs_dr = 0.035,
+  qalys_dr = 0.035,
+  markov_inputs = smoking_inputs,
+  v_init_cohort = c(1, 0)
+)
 
 ## ------------------------------------------------
 ## Method `markov_model$generate_input_parameters`
@@ -57,14 +73,30 @@ smoking_markov_model$generate_costs_qalys()
 ## Method `markov_model$generate_results_table`
 ## ------------------------------------------------
 
-smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
+smoking_markov_model$generate_results_table(
+  i_reference_treatment = 1,
+  v_wtp = 150000,
+  currency_symbol = "$"
+)
 
 ## ------------------------------------------------
 ## Method `markov_model$export_to_excel`
 ## ------------------------------------------------
 
-smoking_markov_model$export_to_excel("output/test_workbook.xlsx", startCol = 5, startRow = 8)
-smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, startRow = 8, psa_startCol = 5, psa_startRow = 1)
+xlsx <- tempfile(fileext = ".xlsx")
+smoking_markov_model$export_to_excel(
+  xlsx,
+  startCol = 5,
+  startRow = 8
+)
+xlsm <- tempfile(fileext = ".xlsm")
+smoking_markov_model$export_to_excel(
+  xlsm,
+  startCol = 5,
+  startRow = 8,
+  psa_startCol = 5,
+  psa_startRow = 1
+)
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -196,7 +228,21 @@ An initialised Markov model
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{1+1
+\preformatted{
+smoking_markov_model <- markov_model$new(
+  n_states = 2,
+  n_cycles = 10,
+  cycle_length = 0.5,
+  n_samples = 1000,
+  n_treatments = 2,
+  v_state_names = c("Smoking", "Not smoking"),
+  v_treatment_names = c("SoC", "SoC with website"),
+  lambda = 20000,
+  costs_dr = 0.035,
+  qalys_dr = 0.035,
+  markov_inputs = smoking_inputs,
+  v_init_cohort = c(1, 0)
+)
 }
 \if{html}{\out{</div>}}
 
@@ -348,7 +394,11 @@ Matrix with column for each treatment and rows with costs, QALY, ICER and benefi
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{smoking_markov_model$generate_results_table(i_reference_treatment = 1, v_wtp = 150000, currency_symbol = "$")
+\preformatted{smoking_markov_model$generate_results_table(
+  i_reference_treatment = 1,
+  v_wtp = 150000,
+  currency_symbol = "$"
+)
 }
 \if{html}{\out{</div>}}
 
@@ -390,8 +440,20 @@ Function to export the Markov model to an Excel workbook
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{smoking_markov_model$export_to_excel("output/test_workbook.xlsx", startCol = 5, startRow = 8)
-smoking_markov_model$export_to_excel("output/test_workbook.xlsm", startCol = 5, startRow = 8, psa_startCol = 5, psa_startRow = 1)
+\preformatted{xlsx <- tempfile(fileext = ".xlsx")
+smoking_markov_model$export_to_excel(
+  xlsx,
+  startCol = 5,
+  startRow = 8
+)
+xlsm <- tempfile(fileext = ".xlsm")
+smoking_markov_model$export_to_excel(
+  xlsm,
+  startCol = 5,
+  startRow = 8,
+  psa_startCol = 5,
+  psa_startRow = 1
+)
 }
 \if{html}{\out{</div>}}
 

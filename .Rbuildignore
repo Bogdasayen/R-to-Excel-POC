@@ -1,0 +1,25 @@
+# R project files
+^.*\.Rproj$
+^\.Rproj\.user$
+^.lintr$
+
+# Documentation files
+^docs$
+README.md
+LICENSE.md
+
+# Temporary files
+.DS_Store
+\~\$.*\.[a-z]+$
+
+# Analysis
+^analysis$
+R-to-Excel-POC description.pdf
+generate_outputs.R
+generate_transition_matrices.R
+
+# Output
+^output$
+
+# Examples
+^examples$
