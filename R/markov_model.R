@@ -929,9 +929,9 @@ markov_model <- R6Class(
                   i_state
               ),
               previous_row,
-              " * (1 - ",
+              " * (1 - (",
               if (sum_probabilities_from == "") 0 else sum_probabilities_from,
-              ")"
+              "))"
             )
             # Now append the probabilities of entering the state
             from_prob_formulae <- c()
@@ -1321,12 +1321,13 @@ markov_model <- R6Class(
           startRow + 2
         )
         if (i_treatment != i_reference_treatment) {
+          # Rows 5 and 6 indicate the incremental costs and QALYs on the results tab. These locations are model-independent
           treatment_results_temp["ICER", ] <- paste0(
             openxlsx2::int2col(startCol + i_treatment),
-            startRow + 1,
+            startRow + 5,
             " / ",
             openxlsx2::int2col(startCol + i_treatment),
-            startRow + 2
+            startRow + 6
           )
         } else {
           # Don't calculate an ICER if it's the reference
