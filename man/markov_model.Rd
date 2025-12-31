@@ -16,7 +16,6 @@ smoking_inputs <- do.call(input_parameters$new, smoking)
 ## Method `markov_model$new`
 ## ------------------------------------------------
 
-
 smoking_markov_model <- markov_model$new(
   n_states = 2,
   n_cycles = 10,
@@ -228,8 +227,7 @@ An initialised Markov model
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{
-smoking_markov_model <- markov_model$new(
+\preformatted{smoking_markov_model <- markov_model$new(
   n_states = 2,
   n_cycles = 10,
   cycle_length = 0.5,
@@ -437,6 +435,9 @@ Function to export the Markov model to an Excel workbook
 \item{\code{i_reference_treatment}}{Index for reference treatment (default 1)}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Boolean to indicate if the exported file exists (but does not confirm model export was accurate)
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}

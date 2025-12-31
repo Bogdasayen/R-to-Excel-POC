@@ -631,6 +631,7 @@ markov_model <- R6Class(
     #' @param psa_startCol Location of cells to which numbers of states, treatments, and cycles are added
     #' @param psa_startRow Location of cells to which numbers of states, treatments, and cycles are added
     #' @param i_reference_treatment Index for reference treatment (default 1)
+    #' @return Boolean to indicate if the exported file exists (but does not confirm model export was accurate)
     #' @examples
     #' xlsx <- tempfile(fileext = ".xlsx")
     #' smoking_markov_model$export_to_excel(
@@ -1352,7 +1353,7 @@ markov_model <- R6Class(
       )
 
       wb$save(file = wb_filename)
-      # returnValue
+      # return value
       file.exists(wb_filename)
     }
   ) # End of public list

@@ -22,7 +22,7 @@ data(smoking)
 }
 \description{
 A structured list containing inputs for a smoking-related health economic model.
-This dataset includes variable names, descriptions, types, distributions, and 
+This dataset includes variable names, descriptions, types, distributions, and
 associated parameters for use in cost-effectiveness or Markov modeling.
 }
 \examples{
