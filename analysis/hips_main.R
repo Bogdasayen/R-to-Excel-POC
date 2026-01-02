@@ -15,7 +15,6 @@ set.seed(2345295)
 
 # Load necessary functions from the package
 devtools::load_all()
-
 state_names = c("post_thr", "post_1st_rev", "post_2nd_rev", "dead")
 treatment_names = c("cemented", "uncemented", "hybrid", "reverse_hybrid")
 
@@ -281,9 +280,10 @@ markov_hips$generate_costs_qalys()
 
 # Summarise the results
 markov_hips$generate_results_table()
+
 write.csv(
   markov_hips$generate_results_table(),
-  file = "output/results_table_hips_1.csv"
+  file = "output/results_table_hips.csv"
 )
 
 
@@ -291,7 +291,7 @@ write.csv(
 # Need to export model settings (states, cycles, treatments) and
 # sensible names to PSa. Ideally also add formatting to Markov trace and input
 # parameter headings
-markov_hips$export_to_excel(wb_filename = "output/test_output_hips_1.xlsm")
+markov_hips$export_to_excel(wb_filename = "output/test_output_hips.xlsm")
 
 
 # Check properties of the Markov trace
