@@ -7,7 +7,7 @@
 #' @field m_values Matrix of sample values defined by member function sample_values()
 #' @export
 input_parameters <- R6Class(
-  "markov_model",
+  "input_parameters",
   list(
     # Assign variable for all public elements of the class
     # These are defined in the initialize() function
