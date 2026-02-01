@@ -1096,7 +1096,7 @@ markov_model <- R6Class(
               excel_value_location[Setting == "costs_dr"]
             ),
             ")^(",
-            i_cycle,
+            i_cycle - 1,
             " * ",
             with(
               self$df_excel_model_settings,
@@ -1114,7 +1114,7 @@ markov_model <- R6Class(
               excel_value_location[Setting == "qalys_dr"]
             ),
             ")^(",
-            i_cycle,
+            i_cycle - 1,
             " * ",
             with(
               self$df_excel_model_settings,
