@@ -170,8 +170,8 @@ markov_model <- R6Class(
         dimnames = list(
           self$treatment_names,
           NULL,
-          self$state_names,
-          self$state_names
+          self$v_state_names,
+          self$v_state_names
         )
       )
 
