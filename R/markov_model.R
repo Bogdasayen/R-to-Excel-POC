@@ -1020,21 +1020,21 @@ markov_model <- R6Class(
         }
 
         # Check if there are any one off (dis)utilities
-        one_off_utilities_indices <- which(
-          self$markov_inputs$df_spec$v_type == "one_off_utility" &
+        one_off_disutilities_indices <- which(
+          self$markov_inputs$df_spec$v_type == "one_off_disutility" &
             (self$markov_inputs$df_spec$v_treatment == i_treatment |
               is.na(self$markov_inputs$df_spec$v_treatment))
         )
         # Extract one off (dis)utilities. These are added to the qalys in first cycle at end of treatment loop
-        if (length(one_off_utilities_indices) > 0) {
-          one_off_utilities_temp <- paste(
+        if (length(one_off_disutilities_indices) > 0) {
+          one_off_disutilities_temp <- paste(
             self$markov_inputs$df_spec$excel_value_location[
-              one_off_utilities_indices
+              one_off_disutilities_indices
             ],
             collapse = " + "
           )
         } else {
-          one_off_utilities_temp <- ""
+          one_off_disutilities_temp <- ""
         }
 
         for (i_cycle in 1:self$n_cycles) {
@@ -1138,16 +1138,16 @@ markov_model <- R6Class(
             sep = "+"
           )
         }
-        if (one_off_utilities_temp != "") {
+        if (one_off_disutilities_temp != "") {
           cycle_qalys_temp[1] <- paste(
-            one_off_utilities_temp,
+            one_off_disutilities_temp,
             cycle_qalys_temp[1],
             sep = "+"
           )
         }
-        if (one_off_utilities_temp != "") {
+        if (one_off_disutilities_temp != "") {
           cycle_qalys_disc_temp[1] <- paste(
-            one_off_utilities_temp,
+            one_off_disutilities_temp,
             cycle_qalys_disc_temp[1],
             sep = "+"
           )
