@@ -619,7 +619,6 @@ markov_model <- R6Class(
       } # End loop over treatments
 
       return(m_results_table)
-      invisible(self)
     },
 
     #' @description
