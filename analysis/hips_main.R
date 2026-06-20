@@ -15,6 +15,8 @@ set.seed(2345295)
 
 # Load necessary functions from the package
 devtools::load_all()
+
+# Define state and treatment names
 state_names = c("post_thr", "post_1st_rev", "post_2nd_rev", "dead")
 treatment_names = c("cemented", "uncemented", "hybrid", "reverse_hybrid")
 
@@ -50,7 +52,7 @@ hips_inputs <- input_parameters$new(
     "Utility of post 1st revision state, follows a normal distribution ",
     "Utility of post 2nd revision state, follows a normal distribution ",
     "Utility of death, fixed value and model assumes no cost",
-    paste0("Cost of", treatment_names, ", fixed value")
+    paste0("Cost of ", treatment_names, ", fixed value")
   ),
   v_type = c(
     "transition_probability",
@@ -103,17 +105,14 @@ hips_inputs <- input_parameters$new(
   m_hyperparameters = matrix(
     c(
       c(rbind(
-        p1 <- c(0.0047, 0.0030, 0.0037, 0.0040, 0.042),
+        p1 <- c(0.0047, 0.0030, 0.0037, 0.0040, 0.0422),
         se1 <- c(0.031, 0.031, 0.031, 0.031, 0.073) * (-log(1 - p1)) * (1 - p1)
       )),
-      rep(c(0.066, 0.066 * 0.1), 3),
-      9004.95 *
-        c(rbind(
-          p2 <- c(0.0047, 0.0030, 0.0037, 0.0040, 0.042, 0.056),
-          se2 <- c(0.031, 0.031, 0.031, 0.031, 0.073, 0.053) *
-            (-log(1 - p2)) *
-            (1 - p2)
-        )),
+      rep(c(0.0724, 0.0724 * 0.1), 3),
+      9004.95 * c(rbind(
+        p2 <- c(0.0047, 0.0030, 0.0037, 0.0040, 0.0422, 0.0563),
+        se2 <- c(0.031, 0.031, 0.031, 0.031, 0.073, 0.053) * (-log(1 - p2)) * (1 - p2)
+      )),
       0.762,
       0.004,
       0.575,
@@ -255,14 +254,16 @@ markov_hips <- markov_model$new(
   v_init_cohort = c(1, 0, 0, 0)
 )
 
+
 # Sample values for the fixed and random parameters
 markov_hips$generate_input_parameters()
 
 # Check the sampled values for the input parameter matrix
 markov_hips$markov_inputs$m_values
 
-markov_hips$generate_transition_matrices()
 
+# Generate the transition matrices
+markov_hips$generate_transition_matrices()
 
 # Check one sample of the transition matrices for each treatment
 # Note that probabilities after post 1st revision state is the same across treatments
@@ -272,10 +273,11 @@ markov_hips$a_transition_matrices[2, 1, , ]
 markov_hips$a_transition_matrices[3, 1, , ]
 markov_hips$a_transition_matrices[4, 1, , ]
 
+
 # Generate the Markov trace
 markov_hips$generate_markov_trace()
 
-
+# Generate costs and QALYs
 markov_hips$generate_costs_qalys()
 
 # Summarise the results
@@ -296,9 +298,7 @@ markov_hips$export_to_excel(wb_filename = "output/test_output_hips.xlsm")
 
 # Check properties of the Markov trace
 dim(markov_hips$a_cohort_array)
-#
 markov_hips$a_cohort_array["cemented", 1, , ]
-#
 markov_hips$a_cohort_array["uncemented", 1, , ]
 
 # For comparison with Excel, average time in each state across PSA samples
