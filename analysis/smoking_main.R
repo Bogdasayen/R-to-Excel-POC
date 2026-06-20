@@ -160,4 +160,4 @@ markov_smoking$a_cohort_array["SoC with website", 1, , ]
 # Average time not smoking on SoC is about 0.617 while with website is 0.672
 apply(markov_smoking$a_cohort_array, c(1, 4), mean)
 
-openxlsx2::xl_open("output/test_output_smoking_1.xlsm")
+openxlsx2::xl_open("output/test_output_smoking.xlsm")
