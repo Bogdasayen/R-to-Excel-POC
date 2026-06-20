@@ -1253,7 +1253,7 @@ markov_model <- R6Class(
           startRow + 1,
           ":markov_trace!",
           openxlsx2::int2col(col_temp),
-          startRow + 1 + self$n_cycles,
+          startRow + self$n_cycles,
           ")"
         )
 
@@ -1269,7 +1269,7 @@ markov_model <- R6Class(
           startRow + 1,
           ":markov_trace!",
           openxlsx2::int2col(col_temp),
-          startRow + 1 + self$n_cycles,
+          startRow + self$n_cycles,
           ")"
         )
 
@@ -1285,7 +1285,7 @@ markov_model <- R6Class(
           startRow + 1,
           ":markov_trace!",
           openxlsx2::int2col(col_temp),
-          startRow + 1 + self$n_cycles,
+          startRow + self$n_cycles,
           ")"
         )
 
@@ -1301,7 +1301,7 @@ markov_model <- R6Class(
           startRow + 1,
           ":markov_trace!",
           openxlsx2::int2col(col_temp),
-          startRow + 1 + self$n_cycles,
+          startRow + self$n_cycles,
           ")"
         )
 
