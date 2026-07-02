@@ -220,23 +220,33 @@ markov_model <- R6Class(
 
       # Fill in diagonal elements to ensure rows sum to 1
       # Ensure remaining patients stay in state
-      for (i_treatment in 1:self$n_treatments) {
-        for (i_state in 1:self$n_states) {
-          if (self$n_states > 2) {
-            self$a_transition_matrices[i_treatment, , i_state, i_state] <- 1 -
-              apply(
-                self$a_transition_matrices[i_treatment, , i_state, -i_state],
-                c(1),
-                sum,
-                na.rm = TRUE
-              )
-          } else {
-            self$a_transition_matrices[i_treatment, , i_state, i_state] <- 1 -
-              self$a_transition_matrices[i_treatment, , i_state, -i_state]
-          }
-        } # End loop over states
-      } # End loop over treatments
-
+      # Simple if number of samples is 1 (e.g., deterministic)
+      if(self$n_samples == 1) {
+        for(i_treatment in 1:self$n_treatments) {
+          diag(self$a_transition_matrices[i_treatment, , ,]) <- 
+            1 - rowSums(self$a_transition_matrices[i_treatment, , ,])
+        }
+      } else {
+        # Probabilistic case
+        for (i_treatment in 1:self$n_treatments) {
+          for (i_state in 1:self$n_states) {
+            if (self$n_states > 2) {
+              self$a_transition_matrices[i_treatment, , i_state, i_state] <- 1 -
+                apply(
+                  self$a_transition_matrices[i_treatment, , i_state, -i_state],
+                  c(1),
+                  sum,
+                  na.rm = TRUE
+                )
+            } else {
+              # Object loses a dimension if only 2 states
+              self$a_transition_matrices[i_treatment, ,i_state, i_state] <- 1 -
+                self$a_transition_matrices[i_treatment, ,i_state, -i_state]
+            }
+          } # End loop over states
+        } # End loop over treatments
+      } # End else if over number of samples
+      
       # Return the object
       invisible(self)
     },
