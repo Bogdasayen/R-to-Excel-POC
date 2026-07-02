@@ -7,6 +7,7 @@
 #' @field n_parameters Number of parameters in the model
 #' @field n_samples Number of probabilistic samples
 #' @field n_treatments Number of treatments, including the reference
+#' @field deterministic_flag Flag to specify that deterministic analysis be used
 #' @field v_state_names Vector of length n_states
 #' @field v_treatment_names Vector of length n_treatments
 #' @field lambda Willingness-to-pay threshold for net monetary benefit
@@ -48,6 +49,7 @@ markov_model <- R6Class(
     n_parameters = NULL,
     n_samples = NULL,
     n_treatments = NULL,
+    deterministic_flag = NULL,
     v_state_names = NULL,
     v_treatment_names = NULL,
     lambda = NULL,
@@ -81,6 +83,7 @@ markov_model <- R6Class(
     #' @param cycle_length Length of cycle (in unspecified units that must be consistent with costs and probabilities)
     #' @param n_samples Number of probabilistic samples
     #' @param n_treatments Number of treatments, including the reference
+    #' @param deterministic_flag Flag to specify that deterministic analysis be used
     #' @param v_state_names Vector of length n_states
     #' @param v_treatment_names Vector of length n_treatments
     #' @param lambda Willingness-to-pay threshold for net monetary benefit
@@ -96,6 +99,7 @@ markov_model <- R6Class(
     #'   cycle_length = 0.5,
     #'   n_samples = 1000,
     #'   n_treatments = 2,
+    #'   deterministic_flag = FALSE,
     #'   v_state_names = c("Smoking", "Not smoking"),
     #'   v_treatment_names = c("SoC", "SoC with website"),
     #'   lambda = 20000,
@@ -111,6 +115,7 @@ markov_model <- R6Class(
       cycle_length,
       n_samples,
       n_treatments,
+      deterministic_flag,
       v_state_names,
       v_treatment_names,
       lambda,
@@ -125,6 +130,7 @@ markov_model <- R6Class(
       self$n_parameters <- nrow(markov_inputs$df_spec)
       self$n_samples <- n_samples
       self$n_treatments <- n_treatments
+      self$deterministic_flag <- deterministic_flag
       self$v_state_names <- v_state_names
       self$v_treatment_names <- v_treatment_names
       self$lambda <- lambda
@@ -142,10 +148,17 @@ markov_model <- R6Class(
     #' @export
     #'
     generate_input_parameters = function(n_samples = NULL) {
+      # Update the number of samples?
       if (!is.null(n_samples)) {
         self$n_samples <- n_samples
+      } 
+      if(self$deterministic_flag & self$n_samples > 1) {
+        warning("deterministic_flag is TRUE but n_samples > 1. Setting n_samples to 1.")
+        self$n_samples <- 1
       }
-      self$markov_inputs$sample_values(self$n_samples)
+
+      self$markov_inputs$sample_values(self$n_samples,
+                                       self$deterministic_flag)
       # Return the object
       invisible(self)
     },
@@ -701,6 +714,7 @@ markov_model <- R6Class(
           "costs_dr",
           "qalys_dr",
           "n_samples",
+          "deterministic_flag",
           "willingness_to_pay",
           "reference_treatment",
           "n_cycles",
@@ -713,6 +727,7 @@ markov_model <- R6Class(
           self$costs_dr,
           self$qalys_dr,
           self$n_samples,
+          self$deterministic_flag,
           self$lambda,
           self$v_treatment_names[i_reference_treatment],
           self$n_cycles,
@@ -720,11 +735,11 @@ markov_model <- R6Class(
           self$n_parameters,
           self$n_treatments
         ),
-        "Modifiable" = c(rep("Y", 5), rep("N", 5)),
+        "Modifiable" = c(rep("Y", 6), rep("N", 5)),
         "excel_value_location" = paste0(
           "model_settings!",
           openxlsx2::int2col(startCol + 1),
-          startRow + c(1:10)
+          startRow + c(1:11)
         )
       )
 
@@ -742,7 +757,11 @@ markov_model <- R6Class(
       self$markov_inputs$specify_excel(
         sheet = "input_parameters",
         startCol = startCol,
-        startRow = startRow
+        startRow = startRow,
+        deterministic_flag_location = with(
+          self$df_excel_model_settings,
+          excel_value_location[Setting == "deterministic_flag"]
+        )
       )
 
       # Add the input parameters, including random sampling formulae, to the Excel workbook
