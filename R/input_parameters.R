@@ -108,6 +108,7 @@ input_parameters <- R6Class(
         v_descriptions,
         v_type,
         v_distributions,
+        v_means = calculate_means(v_distributions, m_hyperparameters),
         m_hyperparameters,
         m_transition,
         v_treatment,
@@ -120,12 +121,27 @@ input_parameters <- R6Class(
     #' Function to generate random parameters based on the specification
     #'
     #' @param n_samples Number of random samples to draw
+    #' @param deterministic_flag Flag to specify that deterministic analysis be used
     #' @examples
     #' markov_inputs$sample_values(n_samples = 1000)
     #' @export
     #'
-    sample_values = function(n_samples) {
-      self$n_samples <- n_samples
+    sample_values = function(n_samples, deterministic_flag = 0) {
+      # Ensure number of samples is 1 if using deterministic analysis
+      if(deterministic_flag & n_samples != 1) {
+        warning("deterministic_flag is TRUE but n_samples is not 1. Setting n_samples to 1.")
+        self$n_samples <- 1
+      } else {
+        self$n_samples <- n_samples
+      }
+      
+      # Update the means
+      self$df_spec$v_means = calculate_means(self$df_spec$v_distributions, 
+                                             matrix(c(self$df_spec$hp_1,
+                                                    self$df_spec$hp_2),
+                                                    ncol = 2,
+                                                    byrow = FALSE))
+      
       self$m_values <- matrix(
         NA,
         nrow = self$n_samples,
@@ -152,6 +168,15 @@ input_parameters <- R6Class(
           )
         }
       }
+      
+      # If deterministic use the means
+      if(deterministic_flag) {
+        self$m_values <- matrix(self$df_spec$v_means,
+                                   nrow = self$n_samples,
+                                   ncol = self$n_parameters,
+                                   dimnames = list(NULL, self$df_spec$v_names)
+        )
+      }
       # Return the object
       invisible(self)
     }, # End sample values function
@@ -162,13 +187,15 @@ input_parameters <- R6Class(
     #' @param sheet Name of sheet to which input parameters are added
     #' @param startCol Column number from which the input parameters are added
     #' @param startRow Row number from which the input parameters are added
+    #' @param deterministic_flag_location Excel workbook location with flag for deterministic analysis. If not NULL function adds an IF statement to use the mean if flag is true and sample from distribution if false
     #' @examples
     #' markov_inputs$specify_excel(
     #'   sheet = "input_parameters"
     #' )
     #' @export
-    specify_excel = function(sheet, startCol = 1, startRow = 1) {
+    specify_excel = function(sheet, startCol = 1, startRow = 1, deterministic_flag_location = NULL) {
       excel_formulae <- rep("", self$n_parameters)
+      excel_mean_formulae <- rep("", self$n_parameters)
 
       # In which column letters would the hyper parameters be stored
       hp_1_col <- openxlsx2::int2col(
@@ -181,6 +208,15 @@ input_parameters <- R6Class(
       # Export the Excel equivalent of each distribution function
       for (i_parameter in 1:self$n_parameters) {
         if (self$df_spec$v_distributions[i_parameter] == "beta") {
+          # Mean of a beta distribution
+          excel_mean_formulae[i_parameter] <- paste0(
+            paste0(hp_1_col, startRow + i_parameter),
+            " / (",
+            paste0(hp_1_col, startRow + i_parameter),
+            " + ",
+            paste0(hp_2_col, startRow + i_parameter),
+            ")"
+          )
           # Note that previously the deprecated inverse distribution BETAINV() was used and not BETA.INV()
           excel_formulae[i_parameter] <- paste0(
             "_xlfn.BETA.INV(RAND(), ",
@@ -191,12 +227,22 @@ input_parameters <- R6Class(
           )
         }
         if (self$df_spec$v_distributions[i_parameter] == "fixed") {
+          # Mean is the same as the first hyperparameter if fixed
+          excel_mean_formulae[i_parameter] <- paste0(
+            hp_1_col,
+            startRow + i_parameter
+          )
           excel_formulae[i_parameter] <- paste0(
             hp_1_col,
             startRow + i_parameter
           )
         }
         if (self$df_spec$v_distributions[i_parameter] == "normal") {
+          # Mean is the same as the first hyperparameter if Normal
+          excel_mean_formulae[i_parameter] <- paste0(
+            hp_1_col,
+            startRow + i_parameter
+          )
           # Note that previously the deprecated inverse distribution NORMINV() was used and not NORM.INV()
           excel_formulae[i_parameter] <- paste0(
             "_xlfn.NORM.INV(RAND(), ",
@@ -207,6 +253,36 @@ input_parameters <- R6Class(
           )
         }
       }
+      
+
+      
+      # Ensure the mean is a formula and append to df_spec
+      class(excel_mean_formulae) <- c(class(excel_mean_formulae), "formula")
+      self$df_spec$excel_mean_formulae <- excel_mean_formulae
+      
+      # Specify the cell holding the sampled value
+      excel_mean_value_location <- rep(paste0(
+        sheet,
+        "!",
+        openxlsx2::int2col(
+          startCol + which(names(self$df_spec) == "excel_mean_formulae") - 1
+        ),
+        c((startRow + 1):(startRow + self$n_parameters))
+      ))
+      
+      # Add an IF statement to choose between mean and sampled value if
+      # the flag was provided
+      if(!is.null(deterministic_flag_location)) {
+        excel_formulae <- paste0("IF(", 
+                                 deterministic_flag_location,
+                                 ", ",
+                                 excel_mean_value_location,
+                                 ", ",
+                                 excel_formulae,
+                                 ")")
+      }
+      
+      # Ensure sampled value is a formula and append to df_spec
       class(excel_formulae) <- c(class(excel_formulae), "formula")
       self$df_spec$excel_formulae <- excel_formulae
 

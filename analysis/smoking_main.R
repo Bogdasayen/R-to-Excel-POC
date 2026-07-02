@@ -101,6 +101,7 @@ markov_smoking <- markov_model$new(
   cycle_length = 0.5,
   n_samples = 1000,
   n_treatments = 2,
+  deterministic_flag = FALSE,
   v_state_names = c("Smoking", "Not smoking"),
   v_treatment_names = c("SoC", "SoC with website"),
   lambda = 20000,

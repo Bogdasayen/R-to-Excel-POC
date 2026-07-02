@@ -245,6 +245,7 @@ markov_hips <- markov_model$new(
   cycle_length = 1,
   n_samples = 1000,
   n_treatments = 4,
+  deterministic_flag = FALSE,
   v_state_names = state_names,
   v_treatment_names = treatment_names,
   lambda = 20000,
