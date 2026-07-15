@@ -102,6 +102,7 @@ markov_smoking <- markov_model$new(
   n_samples = 1000,
   n_treatments = 2,
   deterministic_flag = FALSE,
+  time_dependent_flag = FALSE,
   v_state_names = c("Smoking", "Not smoking"),
   v_treatment_names = c("SoC", "SoC with website"),
   lambda = 20000,
@@ -123,8 +124,8 @@ markov_smoking$generate_transition_matrices()
 # Check one sample of the transition matrices for each treatment
 # Note that probability of relapse is the same across website and SoC
 # And note that transition matrices sum to 1
-markov_smoking$a_transition_matrices[1, 1, , ]
-markov_smoking$a_transition_matrices[2, 1, , ]
+markov_smoking$a_transition_matrices[1, 1, 1, , ]
+markov_smoking$a_transition_matrices[2, 1, 1, , ]
 
 # Generate the Markov trace
 markov_smoking$generate_markov_trace()

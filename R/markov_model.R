@@ -15,6 +15,7 @@
 #' @field costs_dr Discount rate for costs per cycle for cohort simulation (e.g., 5\% is costs_dr = 0.05)
 #' @field qalys_dr Discount rate for QALYs or other effects per cycle for cohort simulation (e.g., 5\% is qalys_dr = 0.05)
 #' @field markov_inputs An object of R6 class input_parameters with description and (optional) sampled values
+#' @field m_time_dependent_settings Matrix specifying time-dependent distributions for each transition probability 
 #' @field a_transition_matrices Array of (time-homogeneous) random transition matrices with dimensions n_samples by n_states by n_states
 #' @field a_state_costs Array of (time-homogeneous) random state costs with dimensions n_treatments by n_samples by n_states
 #' @field a_state_qalys Array of (time-homogeneous) random state qalys with dimensions n_treatments by n_samples by n_states
@@ -58,6 +59,7 @@ markov_model <- R6Class(
     costs_dr = NULL,
     qalys_dr = NULL,
     markov_inputs = NULL,
+    m_time_dependent_settings = NULL,
     a_transition_matrices = NULL,
     a_state_costs = NULL,
     a_state_qalys = NULL,
@@ -93,6 +95,7 @@ markov_model <- R6Class(
     #' @param costs_dr Discount rate for costs per cycle for cohort simulation (e.g., 5\% is costs_dr = 0.05)
     #' @param qalys_dr Discount rate for QALYs or other effects per cycle for cohort simulation (e.g., 5\% is qalys_dr = 0.05)
     #' @param markov_inputs An object of R6 class input_parameters description
+    #' @param m_time_dependent_settings Matrix specifying time-dependent distributions for each transition probability (default NULL)
     #' @param v_init_cohort Vector representing initial proportion in each cohort
     #' @return An initialised Markov model
     #' @examples
@@ -127,8 +130,12 @@ markov_model <- R6Class(
       costs_dr,
       qalys_dr,
       markov_inputs,
+      m_time_dependent_settings = NULL,
       v_init_cohort
     ) {
+      if(time_dependent_flag & is.null(m_time_dependent_settings)) {
+        stop("If time_dependent_flag is TRUE m_time_dependent_distirbutions must be non-null")
+      }
       self$n_states <- n_states
       self$n_cycles <- n_cycles
       self$cycle_length <- cycle_length
@@ -143,6 +150,7 @@ markov_model <- R6Class(
       self$costs_dr <- costs_dr
       self$qalys_dr <- qalys_dr
       self$markov_inputs <- markov_inputs
+      self$m_time_dependent_settings <- m_time_dependent_settings
       self$v_init_cohort <- v_init_cohort
     }, # End initialize function
 
@@ -183,11 +191,13 @@ markov_model <- R6Class(
         dim = c(
           self$n_treatments,
           self$n_samples,
+          self$n_cycles,
           self$n_states,
           self$n_states
         ),
         dimnames = list(
           self$treatment_names,
+          NULL,
           NULL,
           self$v_state_names,
           self$v_state_names
@@ -196,62 +206,83 @@ markov_model <- R6Class(
 
       # Loop through the parameters which represent transition parameters
       # Use each to fill in corresponding element of transition matrices
-      for (i_parameter in which(!is.na(self$markov_inputs$df_spec$from))) {
-        # Get the associated treatment
-        # It is NA if applies to all treatments
-        i_treatment <- self$markov_inputs$df_spec$v_treatment[i_parameter]
-
-        # If treatment specific
-        if (!is.na(i_treatment)) {
-          self$a_transition_matrices[
-            i_treatment,
-            ,
-            self$markov_inputs$df_spec$from[i_parameter],
-            self$markov_inputs$df_spec$to[i_parameter]
-          ] <-
-            self$markov_inputs$m_values[, i_parameter]
-        } else {
-          # Not treatment specific
-          self$a_transition_matrices[, ,
-            self$markov_inputs$df_spec$from[i_parameter],
-            self$markov_inputs$df_spec$to[i_parameter]
-          ] <-
-            # Each sampled value is repeated for each treatment
-            rep(
-              self$markov_inputs$m_values[, i_parameter],
-              each = self$n_treatments
-            )
+      if(!self$time_dependent_flag) {
+        # Time-independent transition probabilities direct from sampled parameters
+        for (i_parameter in which(!is.na(self$markov_inputs$df_spec$from))) {
+          # Get the associated treatment
+          # It is NA if applies to all treatments
+          i_treatment <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+          
+          # If treatment specific
+          if (!is.na(i_treatment)) {
+            self$a_transition_matrices[
+              i_treatment,
+              ,
+              ,
+              self$markov_inputs$df_spec$from[i_parameter],
+              self$markov_inputs$df_spec$to[i_parameter]
+            ] <-
+              rep(
+                self$markov_inputs$m_values[, i_parameter], 
+                times = self$n_cycles
+              )
+          } else {
+            # Not treatment specific
+            self$a_transition_matrices[
+              , 
+              , 
+              ,
+              self$markov_inputs$df_spec$from[i_parameter],
+              self$markov_inputs$df_spec$to[i_parameter]
+            ] <-
+              # Each sampled value is repeated for each treatment
+              rep(
+                self$markov_inputs$m_values[, i_parameter],
+                each = self$n_treatments,
+                times = self$n_cycles
+              )
+          }
         }
+      } else {
+        # Time dependent transition probabilities
+        warning("Time-dependent transitions not implemented")
       }
-
+      
       # Fill in diagonal elements to ensure rows sum to 1
       # Ensure remaining patients stay in state
       # Simple if number of samples is 1 (e.g., deterministic)
       if(self$n_samples == 1) {
         for(i_treatment in 1:self$n_treatments) {
-          diag(self$a_transition_matrices[i_treatment, , ,]) <- 
-            1 - rowSums(self$a_transition_matrices[i_treatment, , ,])
-        }
+          for(i_state in 1:self$n_states) {
+            self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
+              apply(
+                self$a_transition_matrices[i_treatment, 1, , i_state, -i_state],
+                c(1),
+                sum,
+                na.rm = TRUE
+              )
+          } # End loop over states
+        } # End loop over treatments
       } else {
         # Probabilistic case
         for (i_treatment in 1:self$n_treatments) {
           for (i_state in 1:self$n_states) {
             if (self$n_states > 2) {
-              self$a_transition_matrices[i_treatment, , i_state, i_state] <- 1 -
+              self$a_transition_matrices[i_treatment, , , i_state, i_state] <- 1 -
                 apply(
-                  self$a_transition_matrices[i_treatment, , i_state, -i_state],
-                  c(1),
+                  self$a_transition_matrices[i_treatment, , , i_state, -i_state],
+                  c(1, 2),
                   sum,
                   na.rm = TRUE
                 )
             } else {
               # Object loses a dimension if only 2 states
-              self$a_transition_matrices[i_treatment, ,i_state, i_state] <- 1 -
-                self$a_transition_matrices[i_treatment, ,i_state, -i_state]
+              self$a_transition_matrices[i_treatment, , , i_state, i_state] <- 1 -
+                self$a_transition_matrices[i_treatment, , , i_state, -i_state]
             }
           } # End loop over states
         } # End loop over treatments
-      } # End else if over number of samples
+      } # End else if probabilistic
       
       # Return the object
       invisible(self)
@@ -392,7 +423,7 @@ markov_model <- R6Class(
             # Multiply previous cycle's cohort vector by transition matrix
             a_cohort_array[i_treatment, i_sample, i_cycle, ] <-
               a_cohort_array[i_treatment, i_sample, i_cycle - 1, ] %*%
-              a_transition_matrices[i_treatment, i_sample, , ]
+              a_transition_matrices[i_treatment, i_sample, i_cycle, , ]
           }
         }
       }

@@ -246,6 +246,7 @@ markov_hips <- markov_model$new(
   n_samples = 1000,
   n_treatments = 4,
   deterministic_flag = FALSE,
+  time_dependent_flag = FALSE,
   v_state_names = state_names,
   v_treatment_names = treatment_names,
   lambda = 20000,
@@ -269,10 +270,10 @@ markov_hips$generate_transition_matrices()
 # Check one sample of the transition matrices for each treatment
 # Note that probabilities after post 1st revision state is the same across treatments
 # Note that transition matrices sum to 1
-markov_hips$a_transition_matrices[1, 1, , ]
-markov_hips$a_transition_matrices[2, 1, , ]
-markov_hips$a_transition_matrices[3, 1, , ]
-markov_hips$a_transition_matrices[4, 1, , ]
+markov_hips$a_transition_matrices[1, 1, 1, , ]
+markov_hips$a_transition_matrices[2, 1, 1, , ]
+markov_hips$a_transition_matrices[3, 1, 1, , ]
+markov_hips$a_transition_matrices[4, 1, 1, , ]
 
 
 # Generate the Markov trace
