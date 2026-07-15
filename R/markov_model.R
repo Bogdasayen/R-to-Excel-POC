@@ -7,7 +7,8 @@
 #' @field n_parameters Number of parameters in the model
 #' @field n_samples Number of probabilistic samples
 #' @field n_treatments Number of treatments, including the reference
-#' @field deterministic_flag Flag to specify that deterministic analysis be used
+#' @field deterministic_flag Flag to specify that deterministic analysis be used (default FALSE)
+#' @field time_dependent_flag Flag to specify that transition probabilities are time dependent (default FALSE)
 #' @field v_state_names Vector of length n_states
 #' @field v_treatment_names Vector of length n_treatments
 #' @field lambda Willingness-to-pay threshold for net monetary benefit
@@ -50,6 +51,7 @@ markov_model <- R6Class(
     n_samples = NULL,
     n_treatments = NULL,
     deterministic_flag = NULL,
+    time_dependent_flag = NULL,
     v_state_names = NULL,
     v_treatment_names = NULL,
     lambda = NULL,
@@ -83,7 +85,8 @@ markov_model <- R6Class(
     #' @param cycle_length Length of cycle (in unspecified units that must be consistent with costs and probabilities)
     #' @param n_samples Number of probabilistic samples
     #' @param n_treatments Number of treatments, including the reference
-    #' @param deterministic_flag Flag to specify that deterministic analysis be used
+    #' @param deterministic_flag Flag to specify that deterministic analysis be used (default FALSE)
+    #' @param time_dependent_flag Flag to specify that transition probabilities are time dependent (default FALSE)
     #' @param v_state_names Vector of length n_states
     #' @param v_treatment_names Vector of length n_treatments
     #' @param lambda Willingness-to-pay threshold for net monetary benefit
@@ -100,6 +103,7 @@ markov_model <- R6Class(
     #'   n_samples = 1000,
     #'   n_treatments = 2,
     #'   deterministic_flag = FALSE,
+    #'   time_dependent_flag = FALSE,
     #'   v_state_names = c("Smoking", "Not smoking"),
     #'   v_treatment_names = c("SoC", "SoC with website"),
     #'   lambda = 20000,
@@ -115,7 +119,8 @@ markov_model <- R6Class(
       cycle_length,
       n_samples,
       n_treatments,
-      deterministic_flag,
+      deterministic_flag = FALSE,
+      time_dependent_flag = FALSE,
       v_state_names,
       v_treatment_names,
       lambda,
@@ -131,6 +136,7 @@ markov_model <- R6Class(
       self$n_samples <- n_samples
       self$n_treatments <- n_treatments
       self$deterministic_flag <- deterministic_flag
+      self$time_dependent_flag <- time_dependent_flag
       self$v_state_names <- v_state_names
       self$v_treatment_names <- v_treatment_names
       self$lambda <- lambda
