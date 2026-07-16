@@ -57,3 +57,36 @@ calculate_means <- function(v_distributions, m_hyperparameters) {
   }
   return(v_means)
 }
+
+#' Calculate change in survival probability
+#' 
+#' Function calculates change in probability from start to end time for vectors of sampled parameters
+#' Used by markov_model class function generate_transition_matrices() for the time-dependent case
+#' Supports vectors of parameters for probabilistic sensitivity analysis
+#' @param start_time Start time in years
+#' @param end_time End time in years
+#' @param distribution_name Name of distribution (currently supports exp and Weibull)
+#' @param v_par1 Vector of parameter 1 on linear predictor scale (e.g., log rate for exponential or log shape for Weibull)
+#' @param v_par2 Vector of parameter 2 on linear predictor scale (e.g., log scale for Weibull)
+#' @param v_par3 Parameter 3 on linear predictor scale (e.g., to allow future generalised gamma)
+#' @return Vector of probabilities for each set of supplied parameters
+#' @export
+calculate_survival_probability <- function(start_time, 
+                                           end_time, 
+                                           distribution_name, 
+                                           v_par1, 
+                                           v_par2 = NULL, 
+                                           v_par3 = NULL) {
+  
+  if(distribution_name == "weibull") {
+    probs <- 
+      pweibull(end_time, shape = exp(v_par1), scale = exp(v_par2)) - 
+      pweibull(start_time, shape = exp(v_par1), scale = exp(v_par2))
+  }
+  if(distribution_name == "exp") {
+    probs <- 
+      pexp(end_time, exp(v_par1)) - 
+      pexp(start_time, exp(v_par1))
+  }
+  return(probs)
+}
