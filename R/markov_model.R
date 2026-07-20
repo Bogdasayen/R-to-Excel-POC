@@ -1053,116 +1053,121 @@ markov_model <- R6Class(
       )
       
       # Generate the time-dependent transition probabilities from markov_inputs
-      df_trans_probs_time_dependent <- data.frame(cycle = c(1:self$n_cycles))
-      cell_formula_temp <- rep("", self$n_cycles)
-      
-      for (i_treatment in 1:self$n_treatments) {
-        for (i_from in 1:self$n_states) {
-          for (i_to in 1:self$n_states) {
-            # Only apply models to transitions to different states
-            if(i_to != i_from) { 
-            for(i_cycle in 1:self$n_cycles) {
-              model_index <- self$df_time_dependent_settings$from == i_from &
-              self$df_time_dependent_settings$to == i_to &
-                (self$df_time_dependent_settings$v_treatment == i_treatment |
-                is.na(self$df_time_dependent_settings$v_treatment))
-              
-              if(sum(model_index) != 0) {
-                if(self$df_time_dependent_settings$v_distributions[model_index] == "exp") {
-                  # Probability at end of current cycle minus probability at start of current cycle
-                  cell_formula_temp[i_cycle] <- paste0("- EXP(-(", # Adding probability at end
-                                              openxlsx2::int2col(
-                                                startCol),
-                                              startRow + i_cycle,
-                                              " * ",
-                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
-                                              ")",
-                                              " * EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
-                                              "))",
-                                              "+ EXP(-((", # Subtracting probability at start
-                                              openxlsx2::int2col(
-                                                startCol),
-                                              startRow + i_cycle,
-                                              " - 1)",
-                                              " * ",
-                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
-                                              ")",
-                                              " * EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
-                                              "))")
-                } else if(self$df_time_dependent_settings$v_distributions[model_index] == "weibull") {
-                  # Probability at end of current cycle minus probability at start of current cycle
-                  cell_formula_temp[i_cycle] <- paste0("- EXP(- (((", # Adding probability at end of cycle
-                                              openxlsx2::int2col(
-                                                startCol),
-                                              startRow + i_cycle,
-                                              " * ",
-                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
-                                              ")",
-                                              " / EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
-                                              ")) ^ EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
-                                              "))) + ", # Subtracting probability at start of cycle
-                                              "EXP(- ((((",
-                                              openxlsx2::int2col(
-                                                startCol),
-                                              startRow + i_cycle,
-                                              " - 1)",
-                                              " * ",
-                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
-                                              ")",
-                                              " / EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
-                                              ")) ^ EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
-                                              ")))")
-                } else {
-                  stop("Unsupported distribution from R-to-Excel. Must be exp or weibull.")
-                }
+      # Only if the model is time-dependent
+      if(self$time_dependent_flag) {
+        df_trans_probs_time_dependent <- data.frame(cycle = c(1:self$n_cycles))
+        cell_formula_temp <- rep("", self$n_cycles)
+        
+        for (i_treatment in 1:self$n_treatments) {
+          for (i_from in 1:self$n_states) {
+            for (i_to in 1:self$n_states) {
+              # Only apply models to transitions to different states
+              if(i_to != i_from) { 
+                for(i_cycle in 1:self$n_cycles) {
+                  model_index <- self$df_time_dependent_settings$from == i_from &
+                    self$df_time_dependent_settings$to == i_to &
+                    (self$df_time_dependent_settings$v_treatment == i_treatment |
+                       is.na(self$df_time_dependent_settings$v_treatment))
+                  
+                  if(sum(model_index) != 0) {
+                    if(self$df_time_dependent_settings$v_distributions[model_index] == "exp") {
+                      # Probability at end of current cycle minus probability at start of current cycle
+                      cell_formula_temp[i_cycle] <- paste0("- EXP(-(", # Adding probability at end
+                                                           openxlsx2::int2col(
+                                                             startCol),
+                                                           startRow + i_cycle,
+                                                           " * ",
+                                                           self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                                           ")",
+                                                           " * EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                                           "))",
+                                                           "+ EXP(-((", # Subtracting probability at start
+                                                           openxlsx2::int2col(
+                                                             startCol),
+                                                           startRow + i_cycle,
+                                                           " - 1)",
+                                                           " * ",
+                                                           self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                                           ")",
+                                                           " * EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                                           "))")
+                    } else if(self$df_time_dependent_settings$v_distributions[model_index] == "weibull") {
+                      # Probability at end of current cycle minus probability at start of current cycle
+                      cell_formula_temp[i_cycle] <- paste0("- EXP(- (((", # Adding probability at end of cycle
+                                                           openxlsx2::int2col(
+                                                             startCol),
+                                                           startRow + i_cycle,
+                                                           " * ",
+                                                           self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                                           ")",
+                                                           " / EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                                           ")) ^ EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                                           "))) + ", # Subtracting probability at start of cycle
+                                                           "EXP(- ((((",
+                                                           openxlsx2::int2col(
+                                                             startCol),
+                                                           startRow + i_cycle,
+                                                           " - 1)",
+                                                           " * ",
+                                                           self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                                           ")",
+                                                           " / EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                                           ")) ^ EXP(",
+                                                           self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                                           ")))")
+                    } else {
+                      stop("Unsupported distribution from R-to-Excel. Must be exp or weibull.")
+                    }
+                  } else {
+                    cell_formula_temp[i_cycle] <- "0"
+                  }
+                  
+                } # End loop over cycles
               } else {
-                cell_formula_temp[i_cycle] <- "0"
+                # Transition probabilities back to the same state
+                for(i_cycle in 1:self$n_cycles) {
+                  cell_formula_temp[i_cycle] <- paste0("1 - ",
+                                                       paste0(
+                                                         openxlsx2::int2col(
+                                                           startCol + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + c(1:self$n_states)[-i_from]),
+                                                         startRow + i_cycle),
+                                                       collapse = "+")
+                }
               }
+              # Append these formulae to the Markov trace
+              class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
+              df_trans_probs_time_dependent <- cbind(df_trans_probs_time_dependent, cell_formula_temp)
               
-            } # End loop over cycles
-            } else {
-              # Transition probabilities back to the same state
-              for(i_cycle in 1:self$n_cycles) {
-                cell_formula_temp[i_cycle] <- paste0("1 - ",
-                                                     paste0(
-                                                       openxlsx2::int2col(
-                                                         startCol + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + c(1:self$n_states)[-i_from]),
-                                                       startRow + i_cycle),
-                                                     collapse = "+")
-              }
-            }
-            # Append these formulae to the Markov trace
-            class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
-            df_trans_probs_time_dependent <- cbind(df_trans_probs_time_dependent, cell_formula_temp)
-            
-            # Give column a sensible header
-            names(df_trans_probs_time_dependent)[
-              1 + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + i_to
-            ] <- paste0(
-              self$v_treatment_names[i_treatment],
-              "_",
-              self$v_state_names[i_from],
-              "_to_",
-              self$v_state_names[i_to]
-            )
-          } # End loop over to states
-        } # End loop over from states
-      } # End loop over treatments
+              # Give column a sensible header
+              names(df_trans_probs_time_dependent)[
+                1 + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + i_to
+              ] <- paste0(
+                self$v_treatment_names[i_treatment],
+                "_",
+                self$v_state_names[i_from],
+                "_to_",
+                self$v_state_names[i_to]
+              )
+            } # End loop over to states
+          } # End loop over from states
+        } # End loop over treatments
+       
+        # Add the time-dependent transition probabilities to the Excel workbook
+        wb$add_data(
+          sheet = "trans_probs_time_dependent",
+          x = df_trans_probs_time_dependent,
+          start_row = startRow,
+          start_col = startCol,
+          na.strings = NULL
+        ) 
+      } # End if the model is time-dependent
       
-      # Add the state QALYs to the Excel workbook
-      wb$add_data(
-        sheet = "trans_probs_time_dependent",
-        x = df_trans_probs_time_dependent,
-        start_row = startRow,
-        start_col = startCol,
-        na.strings = NULL
-      )
+
 
       # Generate the Markov trace using transition probabilities from markov_inputs
       # This will also include calculation of state costs and QALYs
