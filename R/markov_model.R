@@ -895,17 +895,26 @@ markov_model <- R6Class(
       if(self$time_dependent_flag) {
         
         # Add an Excel value location to the time-dependent settings
+     #   self$df_time_dependent_settings <- 
+    #      cbind(
+    #        self$df_time_dependent_settings,
+    #        data.frame(
+    #          "excel_value_location" = paste0(
+    #            "time_dependent_settings!",
+    #            openxlsx2::int2col(startCol + 1),
+    #            startRow + c(1:dim(self$df_time_dependent_settings)[1])
+    #          )
+    #        )
+    #      )
+        
         self$df_time_dependent_settings <- 
           cbind(
             self$df_time_dependent_settings,
             data.frame(
-              "excel_value_location" = paste0(
-                "time_dependent_settings!",
-                openxlsx2::int2col(startCol + 1),
-                startRow + c(1:dim(self$df_time_dependent_settings)[1])
-              )
+              "Modifiable?" = "Not modifiable, for information only"
             )
           )
+        
         
         # Add the time-dependent settings to the Excel workbook
         wb$add_data(
