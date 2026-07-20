@@ -5,6 +5,8 @@
 #' @field n_samples Number of probabilistic samples
 #' @field df_spec Data frame specifying names and distributions of parameters
 #' @field m_values Matrix of sample values defined by member function sample_values()
+#' 
+#' @import dplyr
 #' @export
 input_parameters <- R6Class(
   "input_parameters",
@@ -23,9 +25,10 @@ input_parameters <- R6Class(
     #' @description
     #' Initialise the input parameters object
     #'
+    #' @param input_workbook String with name of Excel workbook specifying the input parameters. Must follow the template supplied in data/input_template.xlsx. If supplied then all other arguments can be null and vice versa
     #' @param v_names Vector of string names of the parameters (can be NULL)
     #' @param v_descriptions Vector of string descriptions of the parameters (can be NULL)
-    #' @param v_type Vector of strings specifying type of parameter (e.g., transition_probability, one_off_cost, cost)
+    #' @param v_type Vector of strings specifying type of parameter (e.g., transition_probability, one_off_cost, cost) 
     #' @param v_distributions Vector of strings specifying distributions (options are fixed, beta, normal)
     #' @param m_hyperparameters Matrix of parameters of the corresponding distribution for this parameter (at least one value, and unused are NULL)
     #' @param m_transition Matrix with from and to values identifying transitions which parameter informs (NA if not a transition probability parameter)
@@ -33,6 +36,7 @@ input_parameters <- R6Class(
     #' @param v_state Numeric vector identifying the state to which this cost or utility parameter corresponds  (NA if all)
     #' @return input parameter object with df_spec giving specifications
     #' @examples
+    #' # Values specified in R
     #' markov_inputs <- input_parameters$new(
     #'   v_names = c(
     #'     "Probability quit smoking website",
@@ -91,30 +95,49 @@ input_parameters <- R6Class(
     #'   v_treatment = c(2, 1, NA, NA, NA, 1, NA, NA),
     #'   v_state = c(1, 1, 2, 1, 2, NA, 1, 1)
     #' )
+    #' # Values specified in the Excel input template
+    #' markov_inputs <- input_parameters$new(input_workbook = "data/smoking_inputs.xlsx")
     #' @export
     initialize = function(
-      v_names,
-      v_descriptions,
-      v_type,
-      v_distributions,
-      m_hyperparameters,
-      m_transition,
-      v_treatment,
-      v_state
+    input_workbook = NULL,
+    v_names = NULL,
+    v_descriptions = NULL,
+    v_type = NULL,
+    v_distributions = NULL,
+    m_hyperparameters = NULL,
+    m_transition = NULL,
+    v_treatment = NULL,
+    v_state = NULL
     ) {
-      self$n_parameters <- length(v_names)
-      self$df_spec <- data.frame(
-        v_names,
-        v_descriptions,
-        v_type,
-        v_distributions,
-        v_means = calculate_means(v_distributions, m_hyperparameters),
-        m_hyperparameters,
-        m_transition,
-        v_treatment,
-        v_state
-      )
-      self$m_values <- NULL
+      if(!is.null(input_workbook)) {
+        # Take the parameter specification from the input_parameters sheet
+        self$df_spec <- openxlsx2::wb_to_df(file = input_workbook,
+                                            sheet = "input_parameters")
+        # Add a mean value
+        self$df_spec <- self$df_spec %>%
+          mutate(v_means = calculate_means(df_spec$v_distributions, 
+                                           matrix(c(self$df_spec$hp_1, self$df_spec$hp_2), ncol = 2)
+          ),
+          .after = v_distributions)
+        
+        # Also save the number of parameters
+        self$n_parameters <- length(df_spec$v_names)
+      } else {
+        
+        self$n_parameters <- length(v_names)
+        self$df_spec <- data.frame(
+          v_names,
+          v_descriptions,
+          v_type,
+          v_distributions,
+          v_means = calculate_means(v_distributions, m_hyperparameters),
+          m_hyperparameters,
+          m_transition,
+          v_treatment,
+          v_state
+        )
+        self$m_values <- NULL
+      }
     }, # End initialize function
 
     #' @description

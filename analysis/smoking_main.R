@@ -93,6 +93,9 @@ smoking_inputs <- input_parameters$new(
   v_state = c(1, 1, 2, 1, 2, NA, 1, 1)
 )
 
+# The input parameters can also be loaded from a completed input_template.xlsx workbook
+smoking_inputs <- input_parameters$new("data/smoking_inputs.xlsx")
+
 
 # Define the Markov smoking model
 markov_smoking <- markov_model$new(
