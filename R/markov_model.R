@@ -196,7 +196,7 @@ markov_model <- R6Class(
           self$n_states
         ),
         dimnames = list(
-          self$treatment_names,
+          self$v_treatment_names,
           NULL,
           NULL,
           self$v_state_names,
@@ -305,15 +305,22 @@ markov_model <- R6Class(
       if(self$n_samples == 1) {
         for(i_treatment in 1:self$n_treatments) {
           for(i_state in 1:self$n_states) {
-            self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
-              apply(
-                self$a_transition_matrices[i_treatment, 1, , i_state, -i_state],
-                c(1),
-                sum,
-                na.rm = TRUE
-              )
+            if (self$n_states > 2) { 
+              # Deterministic case with n_states > 2
+              self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
+                apply(
+                  self$a_transition_matrices[i_treatment, 1, , i_state, -i_state],
+                  c(1),
+                  sum,
+                  na.rm = TRUE
+                )
+            } else {
+              # Deterministic case with n_states = 2
+              self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
+                self$a_transition_matrices[i_treatment, 1, , i_state, -i_state]
+            }
           } # End loop over states
-        } # End loop over treatments
+        } # End loop over treatments  
       } else {
         # Probabilistic case
         for (i_treatment in 1:self$n_treatments) {
@@ -474,7 +481,7 @@ markov_model <- R6Class(
             # Multiply previous cycle's cohort vector by transition matrix
             a_cohort_array[i_treatment, i_sample, i_cycle, ] <-
               a_cohort_array[i_treatment, i_sample, i_cycle - 1, ] %*%
-              a_transition_matrices[i_treatment, i_sample, i_cycle, , ]
+              a_transition_matrices[i_treatment, i_sample, i_cycle - 1, , ]
           }
         }
       }
@@ -781,8 +788,9 @@ markov_model <- R6Class(
       }
       
       # Only added if the model is time-dependent
+      # Isn't used in calculations so only for information
       if(!is.element("time_dependent_settings", sheet_names) & self$time_dependent_flag) {
-        wb$add_worksheet("time_dependent_settings", tab_colour = wb_color("green"))
+        wb$add_worksheet("time_dependent_settings")
       }
 
       if (!is.element("input_parameters", sheet_names)) {
@@ -1065,22 +1073,54 @@ markov_model <- R6Class(
               
               if(sum(model_index) != 0) {
                 if(self$df_time_dependent_settings$v_distributions[model_index] == "exp") {
-                  cell_formula_temp[i_cycle] <- paste0("1 - EXP(-",
+                  # Probability at end of current cycle minus probability at start of current cycle
+                  cell_formula_temp[i_cycle] <- paste0("- EXP(-(", # Adding probability at end
                                               openxlsx2::int2col(
                                                 startCol),
                                               startRow + i_cycle,
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " * EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              "))",
+                                              "+ EXP(-((", # Subtracting probability at start
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " - 1)",
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
                                               " * EXP(",
                                               self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
                                               "))")
                 } else if(self$df_time_dependent_settings$v_distributions[model_index] == "weibull") {
-                  cell_formula_temp[i_cycle] <- paste0("EXP(- ((",
+                  # Probability at end of current cycle minus probability at start of current cycle
+                  cell_formula_temp[i_cycle] <- paste0("- EXP(- (((", # Adding probability at end of cycle
                                               openxlsx2::int2col(
                                                 startCol),
                                               startRow + i_cycle,
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
                                               " / EXP(",
-                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
-                                              ")) ^ EXP(",
                                               self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                              ")) ^ EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              "))) + ", # Subtracting probability at start of cycle
+                                              "EXP(- ((((",
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " - 1)",
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " / EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                              ")) ^ EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
                                               ")))")
                 } else {
                   stop("Unsupported distribution from R-to-Excel. Must be exp or weibull.")

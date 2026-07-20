@@ -19,10 +19,10 @@ devtools::load_all()
 # Specify the input parameters for the Markov smoking model
 smoking_inputs <- input_parameters$new(
   v_names = c(
-    "quit_log_shape_soc",
     "quit_log_shape_soc_website", 
-    "quit_log_scale_soc", 
+    "quit_log_shape_soc",
     "quit_log_scale_soc_website",
+    "quit_log_scale_soc", 
     "relapse_log_rate",
     "Utility smoking",
     "Utility not smoking",
@@ -109,10 +109,10 @@ smoking_inputs <- input_parameters$new(
 smoking_time_dependent_settings <- data.frame(
   from = c(1, 1, 2),
   to = c(2, 2, 1),
-  v_treatment = c(1, 2, NA),
+  v_treatment = c(2, 1, NA),
   v_distributions = c("weibull", "weibull", "exp"),
-  v_par1 = c("quit_log_shape_soc", "quit_log_shape_soc_website", "relapse_log_rate"),
-  v_par2 = c("quit_log_scale_soc", "quit_log_scale_soc_website", NA),
+  v_par1 = c("quit_log_shape_soc_website", "quit_log_shape_soc", "relapse_log_rate"),
+  v_par2 = c("quit_log_scale_soc_website", "quit_log_scale_soc", NA),
   v_par3 = c(NA, NA, NA),
   v_description = c("Model for probability of quitting on website, follows a Weibull curve",
                     "Model for probability of quitting on SoC, follows a Weibull curve",
@@ -151,8 +151,8 @@ markov_smoking$generate_transition_matrices()
 # Check one sample of the transition matrices for each treatment
 # Note that probability of relapse is the same across website and SoC
 # And note that transition matrices sum to 1
-markov_smoking$a_transition_matrices[1, 1, 1, , ]
-markov_smoking$a_transition_matrices[2, 1, 1, , ]
+markov_smoking$a_transition_matrices["SoC", 1, 1, , ]
+markov_smoking$a_transition_matrices["SoC with website", 1, 1, , ]
 
 # Generate the Markov trace
 markov_smoking$generate_markov_trace()
@@ -165,7 +165,7 @@ markov_smoking$generate_results_table()
 
 write.csv(
   markov_smoking$generate_results_table(),
-  file = "output/results_table_smoking.csv"
+  file = "output/results_table_smoking_time_dependent.csv"
 )
 
 
@@ -174,7 +174,7 @@ write.csv(
 # sensible names to PSa. Ideally also add formatting to Markov trace and input
 # parameter headings
 markov_smoking$export_to_excel(
-  wb_filename = "output/test_output_smoking.xlsm"
+  wb_filename = "output/test_output_smoking_time_dependent.xlsm"
 )
 
 
