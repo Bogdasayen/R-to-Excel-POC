@@ -7,13 +7,15 @@
 #' @field n_parameters Number of parameters in the model
 #' @field n_samples Number of probabilistic samples
 #' @field n_treatments Number of treatments, including the reference
-#' @field deterministic_flag Flag to specify that deterministic analysis be used
+#' @field deterministic_flag Flag to specify that deterministic analysis be used (default FALSE)
+#' @field time_dependent_flag Flag to specify that transition probabilities are time dependent (default FALSE)
 #' @field v_state_names Vector of length n_states
 #' @field v_treatment_names Vector of length n_treatments
 #' @field lambda Willingness-to-pay threshold for net monetary benefit
 #' @field costs_dr Discount rate for costs per cycle for cohort simulation (e.g., 5\% is costs_dr = 0.05)
 #' @field qalys_dr Discount rate for QALYs or other effects per cycle for cohort simulation (e.g., 5\% is qalys_dr = 0.05)
 #' @field markov_inputs An object of R6 class input_parameters with description and (optional) sampled values
+#' @field df_time_dependent_settings Data frame specifying time-dependent distributions for each transition probability 
 #' @field a_transition_matrices Array of (time-homogeneous) random transition matrices with dimensions n_samples by n_states by n_states
 #' @field a_state_costs Array of (time-homogeneous) random state costs with dimensions n_treatments by n_samples by n_states
 #' @field a_state_qalys Array of (time-homogeneous) random state qalys with dimensions n_treatments by n_samples by n_states
@@ -50,12 +52,14 @@ markov_model <- R6Class(
     n_samples = NULL,
     n_treatments = NULL,
     deterministic_flag = NULL,
+    time_dependent_flag = NULL,
     v_state_names = NULL,
     v_treatment_names = NULL,
     lambda = NULL,
     costs_dr = NULL,
     qalys_dr = NULL,
     markov_inputs = NULL,
+    df_time_dependent_settings = NULL,
     a_transition_matrices = NULL,
     a_state_costs = NULL,
     a_state_qalys = NULL,
@@ -83,13 +87,15 @@ markov_model <- R6Class(
     #' @param cycle_length Length of cycle (in unspecified units that must be consistent with costs and probabilities)
     #' @param n_samples Number of probabilistic samples
     #' @param n_treatments Number of treatments, including the reference
-    #' @param deterministic_flag Flag to specify that deterministic analysis be used
+    #' @param deterministic_flag Flag to specify that deterministic analysis be used (default FALSE)
+    #' @param time_dependent_flag Flag to specify that transition probabilities are time dependent (default FALSE)
     #' @param v_state_names Vector of length n_states
     #' @param v_treatment_names Vector of length n_treatments
     #' @param lambda Willingness-to-pay threshold for net monetary benefit
     #' @param costs_dr Discount rate for costs per cycle for cohort simulation (e.g., 5\% is costs_dr = 0.05)
     #' @param qalys_dr Discount rate for QALYs or other effects per cycle for cohort simulation (e.g., 5\% is qalys_dr = 0.05)
     #' @param markov_inputs An object of R6 class input_parameters description
+    #' @param df_time_dependent_settings Data frame specifying time-dependent distributions for each transition probability (default NULL)
     #' @param v_init_cohort Vector representing initial proportion in each cohort
     #' @return An initialised Markov model
     #' @examples
@@ -100,6 +106,7 @@ markov_model <- R6Class(
     #'   n_samples = 1000,
     #'   n_treatments = 2,
     #'   deterministic_flag = FALSE,
+    #'   time_dependent_flag = FALSE,
     #'   v_state_names = c("Smoking", "Not smoking"),
     #'   v_treatment_names = c("SoC", "SoC with website"),
     #'   lambda = 20000,
@@ -115,15 +122,20 @@ markov_model <- R6Class(
       cycle_length,
       n_samples,
       n_treatments,
-      deterministic_flag,
+      deterministic_flag = FALSE,
+      time_dependent_flag = FALSE,
       v_state_names,
       v_treatment_names,
       lambda,
       costs_dr,
       qalys_dr,
       markov_inputs,
+      df_time_dependent_settings = NULL,
       v_init_cohort
     ) {
+      if(time_dependent_flag & is.null(df_time_dependent_settings)) {
+        stop("If time_dependent_flag is TRUE m_time_dependent_distirbutions must be non-null")
+      }
       self$n_states <- n_states
       self$n_cycles <- n_cycles
       self$cycle_length <- cycle_length
@@ -131,12 +143,14 @@ markov_model <- R6Class(
       self$n_samples <- n_samples
       self$n_treatments <- n_treatments
       self$deterministic_flag <- deterministic_flag
+      self$time_dependent_flag <- time_dependent_flag
       self$v_state_names <- v_state_names
       self$v_treatment_names <- v_treatment_names
       self$lambda <- lambda
       self$costs_dr <- costs_dr
       self$qalys_dr <- qalys_dr
       self$markov_inputs <- markov_inputs
+      self$df_time_dependent_settings <- df_time_dependent_settings
       self$v_init_cohort <- v_init_cohort
     }, # End initialize function
 
@@ -177,11 +191,13 @@ markov_model <- R6Class(
         dim = c(
           self$n_treatments,
           self$n_samples,
+          self$n_cycles,
           self$n_states,
           self$n_states
         ),
         dimnames = list(
-          self$treatment_names,
+          self$v_treatment_names,
+          NULL,
           NULL,
           self$v_state_names,
           self$v_state_names
@@ -190,62 +206,141 @@ markov_model <- R6Class(
 
       # Loop through the parameters which represent transition parameters
       # Use each to fill in corresponding element of transition matrices
-      for (i_parameter in which(!is.na(self$markov_inputs$df_spec$from))) {
-        # Get the associated treatment
-        # It is NA if applies to all treatments
-        i_treatment <- self$markov_inputs$df_spec$v_treatment[i_parameter]
-
-        # If treatment specific
-        if (!is.na(i_treatment)) {
-          self$a_transition_matrices[
-            i_treatment,
-            ,
-            self$markov_inputs$df_spec$from[i_parameter],
-            self$markov_inputs$df_spec$to[i_parameter]
-          ] <-
-            self$markov_inputs$m_values[, i_parameter]
-        } else {
-          # Not treatment specific
-          self$a_transition_matrices[, ,
-            self$markov_inputs$df_spec$from[i_parameter],
-            self$markov_inputs$df_spec$to[i_parameter]
-          ] <-
-            # Each sampled value is repeated for each treatment
-            rep(
-              self$markov_inputs$m_values[, i_parameter],
-              each = self$n_treatments
-            )
+      if(!self$time_dependent_flag) {
+        # Time-independent transition probabilities direct from sampled parameters
+        for (i_parameter in which(!is.na(self$markov_inputs$df_spec$from))) {
+          # Get the associated treatment
+          # It is NA if applies to all treatments
+          i_treatment <- self$markov_inputs$df_spec$v_treatment[i_parameter]
+          
+          # If treatment specific
+          if (!is.na(i_treatment)) {
+            self$a_transition_matrices[
+              i_treatment,
+              ,
+              ,
+              self$markov_inputs$df_spec$from[i_parameter],
+              self$markov_inputs$df_spec$to[i_parameter]
+            ] <-
+              rep(
+                self$markov_inputs$m_values[, i_parameter], 
+                times = self$n_cycles
+              )
+          } else {
+            # Not treatment specific
+            self$a_transition_matrices[
+              , 
+              , 
+              ,
+              self$markov_inputs$df_spec$from[i_parameter],
+              self$markov_inputs$df_spec$to[i_parameter]
+            ] <-
+              # Each sampled value is repeated for each treatment
+              rep(
+                self$markov_inputs$m_values[, i_parameter],
+                each = self$n_treatments,
+                times = self$n_cycles
+              )
+          }
         }
+      } else {
+        # Time dependent transition probabilities
+        # Cycle specific transition probabilities calculated using the utility 
+        # function calculate_survival_probability
+        
+        for (i_model in 1:dim(self$df_time_dependent_settings)[1]) {
+          # Get the associated treatment
+          # It is NA if applies to all treatments
+          i_treatment <- self$df_time_dependent_settings$v_treatment[i_model]
+          
+          # Extract the distribution
+          distribution_name <- self$df_time_dependent_settings$v_distributions[i_model]
+          
+          # If treatment specific
+          if (!is.na(i_treatment)) {
+            for(i_cycle in 1:self$n_cycles) {
+              self$a_transition_matrices[
+                i_treatment,
+                ,
+                i_cycle,
+                self$df_time_dependent_settings$from[i_model],
+                self$df_time_dependent_settings$to[i_model]
+              ] <- calculate_survival_probability(
+                (i_cycle - 1) * self$cycle_length,
+                i_cycle * self$cycle_length,
+                distribution_name,
+                self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par1[i_model]],
+                self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par2[i_model]],
+                self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par3[i_model]])
+            } # End loop over cycles
+          } else {
+            # Not treatment specific
+            for(i_cycle in 1:self$n_cycles) {
+              self$a_transition_matrices[
+                , 
+                , 
+                i_cycle,
+                self$df_time_dependent_settings$from[i_model],
+                self$df_time_dependent_settings$to[i_model]
+              ] <- rep(
+                calculate_survival_probability(
+                  (i_cycle - 1) * self$cycle_length,
+                  i_cycle * self$cycle_length,
+                  distribution_name,
+                  self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par1[i_model]],
+                  self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par2[i_model]],
+                  self$markov_inputs$m_values[, self$df_time_dependent_settings$v_par3[i_model]]),
+                each = self$n_treatments)
+            } # End loop over cycles
+            
+            
+          } # End treatment specific case
+        } # End loop over time-dependent models
+        
       }
-
+      
       # Fill in diagonal elements to ensure rows sum to 1
       # Ensure remaining patients stay in state
       # Simple if number of samples is 1 (e.g., deterministic)
       if(self$n_samples == 1) {
         for(i_treatment in 1:self$n_treatments) {
-          diag(self$a_transition_matrices[i_treatment, , ,]) <- 
-            1 - rowSums(self$a_transition_matrices[i_treatment, , ,])
-        }
-      } else {
-        # Probabilistic case
-        for (i_treatment in 1:self$n_treatments) {
-          for (i_state in 1:self$n_states) {
-            if (self$n_states > 2) {
-              self$a_transition_matrices[i_treatment, , i_state, i_state] <- 1 -
+          for(i_state in 1:self$n_states) {
+            if (self$n_states > 2) { 
+              # Deterministic case with n_states > 2
+              self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
                 apply(
-                  self$a_transition_matrices[i_treatment, , i_state, -i_state],
+                  self$a_transition_matrices[i_treatment, 1, , i_state, -i_state],
                   c(1),
                   sum,
                   na.rm = TRUE
                 )
             } else {
+              # Deterministic case with n_states = 2
+              self$a_transition_matrices[i_treatment, 1, , i_state, i_state] <- 1 -                 
+                self$a_transition_matrices[i_treatment, 1, , i_state, -i_state]
+            }
+          } # End loop over states
+        } # End loop over treatments  
+      } else {
+        # Probabilistic case
+        for (i_treatment in 1:self$n_treatments) {
+          for (i_state in 1:self$n_states) {
+            if (self$n_states > 2) {
+              self$a_transition_matrices[i_treatment, , , i_state, i_state] <- 1 -
+                apply(
+                  self$a_transition_matrices[i_treatment, , , i_state, -i_state],
+                  c(1, 2),
+                  sum,
+                  na.rm = TRUE
+                )
+            } else {
               # Object loses a dimension if only 2 states
-              self$a_transition_matrices[i_treatment, ,i_state, i_state] <- 1 -
-                self$a_transition_matrices[i_treatment, ,i_state, -i_state]
+              self$a_transition_matrices[i_treatment, , , i_state, i_state] <- 1 -
+                self$a_transition_matrices[i_treatment, , , i_state, -i_state]
             }
           } # End loop over states
         } # End loop over treatments
-      } # End else if over number of samples
+      } # End else if probabilistic
       
       # Return the object
       invisible(self)
@@ -386,7 +481,7 @@ markov_model <- R6Class(
             # Multiply previous cycle's cohort vector by transition matrix
             a_cohort_array[i_treatment, i_sample, i_cycle, ] <-
               a_cohort_array[i_treatment, i_sample, i_cycle - 1, ] %*%
-              a_transition_matrices[i_treatment, i_sample, , ]
+              a_transition_matrices[i_treatment, i_sample, i_cycle - 1, , ]
           }
         }
       }
@@ -691,6 +786,12 @@ markov_model <- R6Class(
       if (!is.element("model_settings", sheet_names)) {
         wb$add_worksheet("model_settings", tab_colour = wb_color("green"))
       }
+      
+      # Only added if the model is time-dependent
+      # Isn't used in calculations so only for information
+      if(!is.element("time_dependent_settings", sheet_names) & self$time_dependent_flag) {
+        wb$add_worksheet("time_dependent_settings")
+      }
 
       if (!is.element("input_parameters", sheet_names)) {
         wb$add_worksheet("input_parameters", tab_colour = wb_color("green"))
@@ -702,6 +803,11 @@ markov_model <- R6Class(
 
       if (!is.element("state_qalys", sheet_names)) {
         wb$add_worksheet("state_qalys", tab_colour = wb_color("yellow"))
+      }
+      
+      # Only added if model is time-dependent
+      if (!is.element("trans_probs_time_dependent", sheet_names) & self$time_dependent_flag) {
+        wb$add_worksheet("trans_probs_time_dependent", tab_colour = wb_color("yellow"))
       }
 
       if (!is.element("markov_trace", sheet_names)) {
@@ -725,6 +831,7 @@ markov_model <- R6Class(
           "qalys_dr",
           "n_samples",
           "deterministic_flag",
+          "time_dependent_flag",
           "willingness_to_pay",
           "reference_treatment",
           "n_cycles",
@@ -739,17 +846,18 @@ markov_model <- R6Class(
           self$n_samples,
           self$deterministic_flag,
           self$lambda,
+          self$time_dependent_flag,
           self$v_treatment_names[i_reference_treatment],
           self$n_cycles,
           self$n_states,
           self$n_parameters,
           self$n_treatments
         ),
-        "Modifiable" = c(rep("Y", 6), rep("N", 5)),
+        "Modifiable" = c(rep("Y", 6), rep("N", 6)),
         "excel_value_location" = paste0(
           "model_settings!",
           openxlsx2::int2col(startCol + 1),
-          startRow + c(1:11)
+          startRow + c(1:12)
         )
       )
 
@@ -773,7 +881,7 @@ markov_model <- R6Class(
           excel_value_location[Setting == "deterministic_flag"]
         )
       )
-
+      
       # Add the input parameters, including random sampling formulae, to the Excel workbook
       wb$add_data(
         sheet = "input_parameters",
@@ -782,6 +890,35 @@ markov_model <- R6Class(
         start_col = startCol,
         na.strings = NULL
       )
+      
+      # Only add time-dependent settings and data if the model is time-dependent
+      if(self$time_dependent_flag) {
+        
+        # Add an Excel value location to the time-dependent settings
+        self$df_time_dependent_settings <- 
+          cbind(
+            self$df_time_dependent_settings,
+            data.frame(
+              "excel_value_location" = paste0(
+                "time_dependent_settings!",
+                openxlsx2::int2col(startCol + 1),
+                startRow + c(1:dim(self$df_time_dependent_settings)[1])
+              )
+            )
+          )
+        
+        # Add the time-dependent settings to the Excel workbook
+        wb$add_data(
+          sheet = "time_dependent_settings",
+          x = self$df_time_dependent_settings,
+          start_row = startRow,
+          start_col = startCol,
+          na.strings = NULL
+        )
+        
+      } # End if model time-dependent
+      
+
 
       # Generate formulae for the state costs using input parameters
       df_state_costs <- data.frame(matrix(
@@ -918,6 +1055,118 @@ markov_model <- R6Class(
         start_col = startCol,
         na.strings = NULL
       )
+      
+      # Generate the time-dependent transition probabilities from markov_inputs
+      df_trans_probs_time_dependent <- data.frame(cycle = c(1:self$n_cycles))
+      cell_formula_temp <- rep("", self$n_cycles)
+      
+      for (i_treatment in 1:self$n_treatments) {
+        for (i_from in 1:self$n_states) {
+          for (i_to in 1:self$n_states) {
+            # Only apply models to transitions to different states
+            if(i_to != i_from) { 
+            for(i_cycle in 1:self$n_cycles) {
+              model_index <- self$df_time_dependent_settings$from == i_from &
+              self$df_time_dependent_settings$to == i_to &
+                (self$df_time_dependent_settings$v_treatment == i_treatment |
+                is.na(self$df_time_dependent_settings$v_treatment))
+              
+              if(sum(model_index) != 0) {
+                if(self$df_time_dependent_settings$v_distributions[model_index] == "exp") {
+                  # Probability at end of current cycle minus probability at start of current cycle
+                  cell_formula_temp[i_cycle] <- paste0("- EXP(-(", # Adding probability at end
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " * EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              "))",
+                                              "+ EXP(-((", # Subtracting probability at start
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " - 1)",
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " * EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              "))")
+                } else if(self$df_time_dependent_settings$v_distributions[model_index] == "weibull") {
+                  # Probability at end of current cycle minus probability at start of current cycle
+                  cell_formula_temp[i_cycle] <- paste0("- EXP(- (((", # Adding probability at end of cycle
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " / EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                              ")) ^ EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              "))) + ", # Subtracting probability at start of cycle
+                                              "EXP(- ((((",
+                                              openxlsx2::int2col(
+                                                startCol),
+                                              startRow + i_cycle,
+                                              " - 1)",
+                                              " * ",
+                                              self$df_excel_model_settings$excel_value_location[self$df_excel_model_settings$Setting == "cycle_length"],
+                                              ")",
+                                              " / EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par2[model_index]],
+                                              ")) ^ EXP(",
+                                              self$markov_inputs$df_spec$excel_value_location[self$markov_inputs$df_spec$v_names == self$df_time_dependent_settings$v_par1[model_index]],
+                                              ")))")
+                } else {
+                  stop("Unsupported distribution from R-to-Excel. Must be exp or weibull.")
+                }
+              } else {
+                cell_formula_temp[i_cycle] <- "0"
+              }
+              
+            } # End loop over cycles
+            } else {
+              # Transition probabilities back to the same state
+              for(i_cycle in 1:self$n_cycles) {
+                cell_formula_temp[i_cycle] <- paste0("1 - ",
+                                                     paste0(
+                                                       openxlsx2::int2col(
+                                                         startCol + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + c(1:self$n_states)[-i_from]),
+                                                       startRow + i_cycle),
+                                                     collapse = "+")
+              }
+            }
+            # Append these formulae to the Markov trace
+            class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
+            df_trans_probs_time_dependent <- cbind(df_trans_probs_time_dependent, cell_formula_temp)
+            
+            # Give column a sensible header
+            names(df_trans_probs_time_dependent)[
+              1 + (i_treatment - 1) * (self$n_states * self$n_states) + (i_from - 1) * self$n_states + i_to
+            ] <- paste0(
+              self$v_treatment_names[i_treatment],
+              "_",
+              self$v_state_names[i_from],
+              "_to_",
+              self$v_state_names[i_to]
+            )
+          } # End loop over to states
+        } # End loop over from states
+      } # End loop over treatments
+      
+      # Add the state QALYs to the Excel workbook
+      wb$add_data(
+        sheet = "trans_probs_time_dependent",
+        x = df_trans_probs_time_dependent,
+        start_row = startRow,
+        start_col = startCol,
+        na.strings = NULL
+      )
 
       # Generate the Markov trace using transition probabilities from markov_inputs
       # This will also include calculation of state costs and QALYs
@@ -925,104 +1174,156 @@ markov_model <- R6Class(
 
       cell_formula_temp <- rep("", self$n_cycles)
 
-      for (i_treatment in 1:self$n_treatments) {
-        for (i_state in 1:self$n_states) {
-          cell_formula_temp[1] <- self$v_init_cohort[i_state]
-
-          # Which parameters give probabilities from this state and are relevant
-          # to this treatment (or to all treatments)
-          from_indices <- which(
-            self$markov_inputs$df_spec$from == i_state &
-              (self$markov_inputs$df_spec$v_treatment == i_treatment |
-                is.na(self$markov_inputs$df_spec$v_treatment))
-          )
-          # Create the sum of probabilities of exiting current state
-          sum_probabilities_from <- ifelse(
-            length(from_indices) == 1,
-            self$markov_inputs$df_spec$excel_value_location[from_indices],
-            paste0(
-              self$markov_inputs$df_spec$excel_value_location[from_indices],
-              collapse = "+"
-            )
-          )
-
-          for (i_cycle in 2:self$n_cycles) {
-            # Numeric for row with previous cohort probabilities
-            previous_row <- startRow + i_cycle - 1
-
-            # Cell with probability of being in state at previous cycle
-            cell_formula_temp[i_cycle] <- paste0(
-              openxlsx2::int2col(
-                startCol +
-                  (i_treatment - 1) * self$n_states +
-                  i_state
-              ),
-              previous_row,
-              " * (1 - (",
-              if (sum_probabilities_from == "") 0 else sum_probabilities_from,
-              "))"
-            )
-            # Now append the probabilities of entering the state
-            from_prob_formulae <- c()
-            for (j_state in c(1:self$n_states)[-i_state]) {
-              # Find the parameter storing transition probabilities from j to i
-              from_j_to_i_index <- self$markov_inputs$df_spec$from == j_state &
-                self$markov_inputs$df_spec$to == i_state &
+      # Markov trace if not time-dependent
+      if(!self$time_dependent_flag) {
+        for (i_treatment in 1:self$n_treatments) {
+          for (i_state in 1:self$n_states) {
+            cell_formula_temp[1] <- self$v_init_cohort[i_state]
+            
+            # Which parameters give probabilities from this state and are relevant
+            # to this treatment (or to all treatments)
+            from_indices <- which(
+              self$markov_inputs$df_spec$from == i_state &
                 (self$markov_inputs$df_spec$v_treatment == i_treatment |
-                  is.na(self$markov_inputs$df_spec$v_treatment))
-              # Check that there is a transition from j to i
-              if (sum(from_j_to_i_index, na.rm = TRUE) == 1) {
-                # Add probability of being in j multiplied by probability of going to i
-                from_prob_formulae <- c(
-                  from_prob_formulae,
-                  paste0(
-                    openxlsx2::int2col(
-                      startCol +
-                        (i_treatment - 1) * self$n_states +
-                        j_state
-                    ),
-                    previous_row,
-                    " * ",
-                    self$markov_inputs$df_spec$excel_value_location[which(
-                      from_j_to_i_index
-                    )]
-                  )
-                )
-              } # End if there are transitions from j to i
-            } # End loop over j_state
-            # Create the sum of probabilities of entering current state
-            # Account for possibility that none of cohort makes this transition
-            sum_probabilities_to <- ifelse(
-              length(from_prob_formulae) == 0,
-              "",
-              ifelse(
-                length(from_prob_formulae) == 1,
-                from_prob_formulae,
-                paste0(from_prob_formulae, collapse = "+")
+                   is.na(self$markov_inputs$df_spec$v_treatment))
+            )
+            # Create the sum of probabilities of exiting current state
+            sum_probabilities_from <- ifelse(
+              length(from_indices) == 1,
+              self$markov_inputs$df_spec$excel_value_location[from_indices],
+              paste0(
+                self$markov_inputs$df_spec$excel_value_location[from_indices],
+                collapse = "+"
               )
             )
-            cell_formula_temp[i_cycle] <- paste0(
-              c(
-                cell_formula_temp[i_cycle],
-                if (sum_probabilities_to == "") NULL else sum_probabilities_to
-              ),
-              collapse = " + "
+            
+            for (i_cycle in 2:self$n_cycles) {
+              # Numeric for row with previous cohort probabilities
+              previous_row <- startRow + i_cycle - 1
+              
+              # Cell with probability of being in state at previous cycle
+              cell_formula_temp[i_cycle] <- paste0(
+                openxlsx2::int2col(
+                  startCol +
+                    (i_treatment - 1) * self$n_states +
+                    i_state
+                ),
+                previous_row,
+                " * (1 - (",
+                if (sum_probabilities_from == "") 0 else sum_probabilities_from,
+                "))"
+              )
+              # Now append the probabilities of entering the state
+              from_prob_formulae <- c()
+              for (j_state in c(1:self$n_states)[-i_state]) {
+                # Find the parameter storing transition probabilities from j to i
+                from_j_to_i_index <- self$markov_inputs$df_spec$from == j_state &
+                  self$markov_inputs$df_spec$to == i_state &
+                  (self$markov_inputs$df_spec$v_treatment == i_treatment |
+                     is.na(self$markov_inputs$df_spec$v_treatment))
+                # Check that there is a transition from j to i
+                if (sum(from_j_to_i_index, na.rm = TRUE) == 1) {
+                  # Add probability of being in j multiplied by probability of going to i
+                  from_prob_formulae <- c(
+                    from_prob_formulae,
+                    paste0(
+                      openxlsx2::int2col(
+                        startCol +
+                          (i_treatment - 1) * self$n_states +
+                          j_state
+                      ),
+                      previous_row,
+                      " * ",
+                      self$markov_inputs$df_spec$excel_value_location[which(
+                        from_j_to_i_index
+                      )]
+                    )
+                  )
+                } # End if there are transitions from j to i
+              } # End loop over j_state
+              # Create the sum of probabilities of entering current state
+              # Account for possibility that none of cohort makes this transition
+              sum_probabilities_to <- ifelse(
+                length(from_prob_formulae) == 0,
+                "",
+                ifelse(
+                  length(from_prob_formulae) == 1,
+                  from_prob_formulae,
+                  paste0(from_prob_formulae, collapse = "+")
+                )
+              )
+              cell_formula_temp[i_cycle] <- paste0(
+                c(
+                  cell_formula_temp[i_cycle],
+                  if (sum_probabilities_to == "") NULL else sum_probabilities_to
+                ),
+                collapse = " + "
+              )
+            } # End loop over i_cycle
+            # Append these formulae to the Markov trace
+            class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
+            df_markov_trace <- cbind(df_markov_trace, cell_formula_temp)
+            # Give column a sensible header
+            names(df_markov_trace)[
+              (i_treatment - 1) * self$n_states + i_state + 1
+            ] <- paste0(
+              self$v_treatment_names[i_treatment],
+              "_",
+              self$v_state_names[i_state]
             )
-          } # End loop over i_cycle
-          # Append these formulae to the Markov trace
-          class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
-          df_markov_trace <- cbind(df_markov_trace, cell_formula_temp)
-          # Give column a sensible header
-          names(df_markov_trace)[
-            (i_treatment - 1) * self$n_states + i_state + 1
-          ] <- paste0(
-            self$v_treatment_names[i_treatment],
-            "_",
-            self$v_state_names[i_state]
-          )
-        } # End loop over states
-      } # End loop over treatments
-
+          } # End loop over states
+        } # End loop over treatments
+        
+      } else {
+        # Markov trace if time-dependent
+        for (i_treatment in 1:self$n_treatments) {
+          for (i_state in 1:self$n_states) {
+            # Starting probability of being in the state
+            cell_formula_temp[1] <- self$v_init_cohort[i_state]
+            
+            for (i_cycle in 2:self$n_cycles) {
+              # Numeric for row with previous cohort probabilities
+              # Same in markov_trace and trans_probs_time_dependent
+              previous_row <- startRow + i_cycle - 1        
+              
+              # Relevant column in trans_probs_time_dependent
+              trans_prob_cells <- paste0("trans_probs_time_dependent!", 
+                                         openxlsx2::int2col(
+                                           startCol + (i_treatment - 1) * (self$n_states * self$n_states) + c(1:self$n_states - 1) * self$n_states + i_state
+                                         ), previous_row)
+              
+              
+              # Sum of previous state occupancy probability multiplied by transition probabilities
+              # Includes probabilty of returning to self
+              cell_formula_temp[i_cycle] <- 
+                paste0(
+                  paste0(trans_prob_cells, 
+                         " * ",
+                         openxlsx2::int2col(
+                           startCol +
+                             (i_treatment - 1) * self$n_states +
+                             c(1:self$n_states)
+                         ),
+                         previous_row)
+                  , collapse = " + ")
+              
+            } # End loop over i_cycle
+            # Append these formulae to the Markov trace
+            class(cell_formula_temp) <- c(class(cell_formula_temp), "formula")
+            df_markov_trace <- cbind(df_markov_trace, cell_formula_temp)
+            # Give column a sensible header
+            names(df_markov_trace)[
+              (i_treatment - 1) * self$n_states + i_state + 1
+            ] <- paste0(
+              self$v_treatment_names[i_treatment],
+              "_",
+              self$v_state_names[i_state]
+            )
+          } # End loop over states
+        } # End loop over treatments
+        
+      } # End time-dependent Markov trace generation
+      
       # Generate the costs engine using the markov trace
 
       # Generate formulae for cycle costs and cycle qalys referencing markov_trace
