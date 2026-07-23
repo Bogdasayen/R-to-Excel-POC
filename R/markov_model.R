@@ -472,7 +472,8 @@ markov_model <- R6Class(
       # Main model code
       # Loop over the treatment options
       for (i_treatment in 1:self$n_treatments) {
-        # Loop over the PSA samples
+        # Loop over the probabilistic sensitivity analysis (PSA) samples if n_samples > 1
+        # Runs a single deterministic analysis if n_samples = 1
         for (i_sample in 1:self$n_samples) {
           # Loop over the cycles
           # Cycle 1 is already defined so only need to update cycles 2:n_cycles
