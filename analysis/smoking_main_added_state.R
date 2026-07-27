@@ -118,6 +118,10 @@ smoking_inputs <- input_parameters$new(
 )
 
 
+# The input parameters can also be loaded from a completed input_template.xlsx workbook
+smoking_inputs <- input_parameters$new(input_workbook = "data/smoking_inputs_added_state.xlsx")
+
+
 # Define the Markov smoking model
 markov_smoking <- markov_model$new(
   n_states = 3,
@@ -147,8 +151,8 @@ markov_smoking$generate_transition_matrices()
 # Check one sample of the transition matrices for each treatment
 # Note that probability of relapse is the same across website and SoC
 # And note that transition matrices sum to 1
-markov_smoking$a_transition_matrices[1, 1, , ]
-markov_smoking$a_transition_matrices[2, 1, , ]
+markov_smoking$a_transition_matrices[1, 1, 1, , ]
+markov_smoking$a_transition_matrices[2, 1, 1, , ]
 
 # Generate the Markov trace
 markov_smoking$generate_markov_trace()
