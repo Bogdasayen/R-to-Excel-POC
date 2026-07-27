@@ -115,13 +115,13 @@ input_parameters <- R6Class(
                                             sheet = "input_parameters")
         # Add a mean value
         self$df_spec <- self$df_spec %>%
-          mutate(v_means = calculate_means(df_spec$v_distributions, 
+          mutate(v_means = calculate_means(self$df_spec$v_distributions, 
                                            matrix(c(self$df_spec$hp_1, self$df_spec$hp_2), ncol = 2)
           ),
           .after = v_distributions)
         
         # Also save the number of parameters
-        self$n_parameters <- length(df_spec$v_names)
+        self$n_parameters <- length(self$df_spec$v_names)
       } else {
         
         self$n_parameters <- length(v_names)
