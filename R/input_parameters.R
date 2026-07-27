@@ -173,6 +173,10 @@ input_parameters <- R6Class(
       )
 
       for (i_parameter in seq_len(self$n_parameters)) {
+        if(!is.element(self$df_spec$v_distributions[i_parameter], 
+                       c("beta", "fixed", "normal"))) {
+          stop("Only beta, fixed and normal supported as type of distributions for input parameters")
+        }
         if (self$df_spec$v_distributions[i_parameter] == "beta") {
           self$m_values[, i_parameter] <- rbeta(
             self$n_samples,
